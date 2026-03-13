@@ -26,7 +26,7 @@ export const parseDashboardConfig = {
   users: [
     {
       user: process.env.PARSE_DASHBOARD_USERNAME || 'administrator',
-      pass: process.env.PARSE_DASHBOARD_PASSWORD,
+      pass: process.env.PARSE_DASHBOARD_PASSWORD || 'admin@giveawaypremium2021',
     },
   ],
   trustProxy: parseInt(process.env.PARSE_DASHBOARD_TRUST_PROXY || '1'),
