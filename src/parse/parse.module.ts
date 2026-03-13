@@ -10,11 +10,16 @@ export class ParseModule implements OnModuleInit {
 
   onModuleInit() {
     const app = this.httpAdapterHost.httpAdapter.getInstance();
-    console.log('env', process.env.SERVER_URL)
-
 
     if (!process.env.SERVER_URL) {
-      console.warn('SERVER_URL not set, using default http://localhost:1337/parse');
+      console.warn('SERVER_URL not set, using default http://localhost:1337/api');
+    }
+
+    if (!process.env.PARSE_DASHBOARD_PASSWORD) {
+      console.warn(
+        'PARSE_DASHBOARD_PASSWORD not set, using default credentials. ' +
+        'Please set PARSE_DASHBOARD_PASSWORD in your .env file for security.',
+      );
     }
 
     const api = new ParseServer(parseServerConfig);

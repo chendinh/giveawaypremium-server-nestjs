@@ -1,7 +1,8 @@
 import * as path from 'path';
 
 export const parseServerConfig = {
-  databaseURI: process.env.DATABASE_URI,
+  databaseURI:
+    process.env.DATABASE_URI || 'mongodb://localhost:27017/giveawaypremium',
   cloud: process.env.CLOUD || path.resolve(__dirname, '../cloud/main.js'),
   appId: process.env.APP_ID || 'myAppId',
   masterKey: process.env.MASTER_KEY || 'myMasterKey',
@@ -26,7 +27,7 @@ export const parseDashboardConfig = {
   users: [
     {
       user: process.env.PARSE_DASHBOARD_USERNAME || 'administrator',
-      pass: process.env.PARSE_DASHBOARD_PASSWORD,
+      pass: process.env.PARSE_DASHBOARD_PASSWORD || 'admin',
     },
   ],
   trustProxy: parseInt(process.env.PARSE_DASHBOARD_TRUST_PROXY || '1'),
