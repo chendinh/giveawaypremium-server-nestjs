@@ -1,7 +1,8 @@
 import * as path from 'path';
 
 export const parseServerConfig = {
-  databaseURI: process.env.DATABASE_URI,
+  databaseURI:
+    process.env.DATABASE_URI || 'mongodb://localhost:27017/giveawaypremium',
   cloud: process.env.CLOUD || path.resolve(__dirname, '../cloud/main.js'),
   appId: process.env.APP_ID || 'myAppId',
   masterKey: process.env.MASTER_KEY || 'myMasterKey',
