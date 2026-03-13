@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '${PORT:-1337}:1337'
+    env_file:
+      - .env
+    restart: unless-stopped
+    volumes:
+      - server-logs:/app/logs
+      - server-tmp:/app/tmp
+
+volumes:
+  server-logs:
+  server-tmp:

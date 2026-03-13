@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+    	 *{
+           font-size: 16px;
+          color: #333333;
+      }
+      body {
+        margin: 10px 0;
+        font-family: Roboto, Arial, "sans-serif";
+        background-color: black
+      }
+      .container {
+        margin: 0 auto;
+        max-width: 600px;
+        background: #fff
+      }
+      .btn-confirm {
+        background: linear-gradient(90deg, #EA5165 0%, #EF8E87 100%);
+        border-radius: 30px;
+        width: 100%;
+        height: 50px;
+        line-height: 50px;
+        text-decoration: none;
+        color: #fff !important;
+        display: inline-block;
+        text-align: center;
+        margin: 0px;
+      }
+      .welcome {
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 30px;
+        text-align: center;
+        padding-top: 50px;
+      }
+      .text-align-left {
+          text-align: left
+      }
+      .content {
+          margin-top: 20px;
+          text-align: left
+      }
+      .center {
+        text-align: center;
+      }
+      p {
+        margin: 10px;
+        color: #333333;
+        font-size: 16px;
+        text-align: left;
+      }
+      .container {
+        width: 550px;
+        margin: 0px auto;
+      }
+      .code {
+        background: #000;
+        border-radius: 10px;
+        padding: 10px 30px;
+        color: #fff;
+        font-weight: bold;
+        display: inline-block;
+      }
+      .container div {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+      .footer{
+        text-align: center;
+        color: #828282;
+        padding-top: 20px;
+        padding-bottom: 20px;
+      }
+      @media only screen and (max-width: 600px) {
+      .container {
+        width: 100%;
+        }
+    }
+    </style>
+</head>
+<body>
+    <div class="center">
+        <img src="https://i.ibb.co/72nXnBS/image-5.jpg" alt="logo" width="60px">
+    </div>
+    <div class="container">
+        <p class="welcome">BIÊN NHẬN KÝ GỬI</p>
+        <div class="content">
+            <p>Give Away Premium Quận 1 xác nhận thông tin ký gửi như sau:</p>
+            <p> <%= 'Họ tên khách hàng: ' + customerName; %></p>
+            <p> <%= 'Số điện thoại: ' + phoneNumber; %></p>
+            <p> <%= 'CMND: ' + identityId; %></p>
+            <p> <%= 'Mã ký gửi: ' + consignmentId; %></p>
+            <p> <%= 'Số lượng: ' + numberOfProduct; %></p>
+            <p> <%= 'Ngân hàng đăng ký: ' + bankName ;%></p>
+            <p> <%= 'ID Ngân hàng: ' + bankId;%></p>
+            <p> <%= 'Ngày tổng kết: ' + timeGetMoney ;%></p>
+        </div>
+
+        <div class="content">
+            <p>*Danh sách sản phẩm:</p>
+            <% products.forEach(function(product) { %>
+              <p>------------------------</p>
+              <p> <%= 'Tên sản phẩm: ' + product.name; %></p>
+              <p> <%= 'Số lượng: ' + product.amount; %></p>
+              <p> <%= 'Tình trạng: ' + product.status; %></p>
+              <p> <%= 'Giá bán: ' + product.price;%></p>
+              <p> <%= 'Giá sau phí: ' + product.priceAfterFee;%></p>
+              <p>------------------------</p>
+            <% }); %>
+        </div>
+
+        <br/>
+        <hr style=" border-top: 1px solid #f1f1f1; border-bottom: 0px; margin: 0px 10px"/>
+        
+        <div class="footer">
+            <p>
+              Lưu ý quan trọng cần nắm rõ:
+            </p>
+            
+            <p>
+              1. Quý khách có thể truy cập website <a href='https://giveawaypremium.com.vn/kygui'>https://giveawaypremium.com.vn/kygui</a> để theo dõi thông tin tất toán từ ngày: <%= timeCheck %>. (3 ngày trước ngày tổng kết). <br>
+              2. GAP không giải quyết tất toán tiền và sản phẩm trước thời gian tổng kết với mọi trường hợp. <br>
+              3. Trường hợp quý khách mất biên nhận hoặc nhờ người thân đến tất toán, GAP cần xác nhận thông tin qua số điện thoại và (hình ảnh) CMND/CCCD mà quý khách đã đăng ký giao dịch. <br>
+              4. Các sản phẩm dễ bị bong tróc, hư hại do giới hạn của nhà sản xuất hoặc độ bền của sản phẩm, GAP không chịu trách nhiệm bồi thường. <br>
+              5. GAP có trách nhiệm bảo quản hàng hoá ký gửi, tuy nhiên, rủi ro hư hại trong quá trình thử đồ là không tránh khỏi và ngoài tầm kiểm soát của cửa hàng. GAP kính mong quý khách hiểu rõ vấn đề này. <br>
+              6. Sau 2 tháng kể từ ngày tổng kết Give Away Premium Quận 1 sẽ toàn quyền giải quyết tồn kho khi quý khách không đến lấy hoặc không liên hệ. <br>
+              7. Nếu phát hiện là hàng fake, GAP sẽ thu hồi và gửi lại quý khách, hai bên có trách nhiệm giải quyết phát sinh trong vòng 60 ngày kể từ ngày tổng kết. <br>
+              8. Give Away Premium Quận 1 có quyền thay đổi thời gian tổng kết vì lý do khách quan trong các trường hợp bất khả kháng (di dời, sửa chữa, thiên tai, bão lụt, dịch bệnh,…) <br>
+              9. Tất cả các lưu ý trên có giá trị như điều khoản hợp đồng, các tranh chấp do không tuân thủ điều khoản sẽ không được chấp thuận, khi đó, quyết định của Give Away Premium Quận 1 là quyết định cuối cùng. <br>
+              10. Quý khách hàng cần hỗ trợ có thể liên hệ hotline ký gửi: 0967353502
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>

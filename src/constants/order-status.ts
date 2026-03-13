@@ -1,0 +1,31 @@
+export const GHTKSTATUS: { [key: string]: string } = {
+  '-1': 'CANCELLED',
+  '1': 'WAITING_PICK_UP',
+  '2': 'WAITING_PICK_UP',
+  '3': 'DELIVERING',
+  '4': 'DELIVERING',
+  '5': 'DELIVERED',
+  '6': 'DELIVERED',
+  '7': 'FAILED',
+  '8': 'WAITING_PICK_UP',
+  '9': 'FAILED',
+  '10': 'DELIVERING',
+  '11': 'RETURNING_BACK',
+  '12': 'WAITING_PICK_UP',
+  '13': 'RETURNING_BACK',
+  '20': 'RETURNING_BACK',
+  '21': 'RETURNED_BACK',
+  '123': 'DELIVERING',
+  '127': 'FAILED',
+  '128': 'WAITING_PICK_UP',
+  '45': 'DELIVERED',
+  '49': 'FAILED',
+  '410': 'DELIVERING',
+};
+
+export enum OrderRequestStatus {
+  VALID = 'VALID',
+  IN_QUEUE = 'IN_QUEUE',
+  CANCELLED = 'CANCELLED',
+  IN_ORDER = 'IN_ORDER',
+}
