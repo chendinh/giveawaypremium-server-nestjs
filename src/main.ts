@@ -12,7 +12,6 @@ async function bootstrap() {
     origin: '*',
     optionsSuccessStatus: 204,
   });
-
   const port = process.env.PORT || 1337;
   await app.listen(port);
   console.log(`Server is running on port ${port}`);

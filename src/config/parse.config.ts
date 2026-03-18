@@ -10,7 +10,9 @@ export const parseServerConfig = {
   clientKey: process.env.CLIENT_KEY || 'myClientKey',
   javascriptKey: process.env.JAVASCRIPT_KEY || 'myJavascriptKey',
   restAPIKey: process.env.REST_API_KEY || 'myRestAPIKey',
-  serverURL: process.env.SERVER_URL || 'http://localhost:1337/api',
+  serverURL:
+    process.env.SERVER_URL ||
+    'https://hammerhead-app-dcydg.ondigitalocean.app/api',
   liveQuery: {
     classNames: ['Channel'],
   },
@@ -19,7 +21,9 @@ export const parseServerConfig = {
 export const parseDashboardConfig = {
   apps: [
     {
-      serverURL: process.env.SERVER_URL || 'http://localhost:1337/api',
+      serverURL:
+        process.env.SERVER_URL ||
+        'https://hammerhead-app-dcydg.ondigitalocean.app/api',
       appId: process.env.APP_ID || 'myAppId',
       masterKey: process.env.MASTER_KEY || 'myMasterKey',
       appName: process.env.APP_NAME || 'GiveawayPremium',
