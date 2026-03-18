@@ -44,7 +44,7 @@ export class ParseModule implements OnModuleInit {
       {
         apps: [
           {
-            serverURL: this.configService.get('DATABASE_URI'),
+            serverURL: this.configService.get('SERVER_URL'),
             appId: this.configService.get('APP_ID'),
             masterKey: this.configService.get('MASTER_KEY'),
             appName: this.configService.get('APP_NAME'),
