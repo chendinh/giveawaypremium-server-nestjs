@@ -111,7 +111,6 @@ export class ViettelPost implements Transporter {
       }
 
       const body = pickBy(order, identity);
-      console.log(body);
       const result = await fetch(`${viettelpostUrl}/order/createOrder`, {
         method: 'POST',
         body: JSON.stringify(body),

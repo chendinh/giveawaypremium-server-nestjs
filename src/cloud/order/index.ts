@@ -1,44 +1,11 @@
-import { GHTKSTATUS, VIETTELPOST_STATUS, OrderRequestStatus } from '../../constants/order-status';
+import { getStatusByService, getTransporterOrderId, getStatusFromResponse } from '../../common/transporter.utils';
+import { OrderRequestStatus } from '../../constants/order-status';
 import { getOrder, cancelOrder } from '../../external-services/transporter';
 import { Order } from '../../models/order';
 import { OrderRequest } from '../../models/order.request';
 import { Product } from '../../models/product';
 import { Transporter } from '../../models/transporter';
 import { updateOrderRequestQueue } from '../order-request';
-
-const getStatusByService = (service: string, statusCode: number | string): string => {
-  const code = statusCode.toString();
-  switch (service) {
-    case 'giaohangtietkiem':
-      return GHTKSTATUS[code] ?? '';
-    case 'viettelpost':
-      return VIETTELPOST_STATUS[code] ?? '';
-    default:
-      return '';
-  }
-}
-
-const getTransporterOrderId = (service: string, res: any): string => {
-  switch (service) {
-    case 'giaohangtietkiem':
-      return res.order?.label_id ?? '';
-    case 'viettelpost':
-      return res.data?.ORDER_NUMBER ?? '';
-    default:
-      return '';
-  }
-}
-
-const getStatusFromResponse = (service: string, response: any): number => {
-  switch (service) {
-    case 'giaohangtietkiem':
-      return response?.order?.status ?? 0;
-    case 'viettelpost':
-      return response?.data?.ORDER_STATUS ?? response?.status ?? 0;
-    default:
-      return 0;
-  }
-}
 
 const updateStatusTransporter = async (order: Order) => {
   const transporterPointer = order.get('transporter') as Transporter;

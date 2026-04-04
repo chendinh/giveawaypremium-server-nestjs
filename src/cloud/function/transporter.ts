@@ -1,19 +1,7 @@
-import { GHTKSTATUS, VIETTELPOST_STATUS } from "../../constants/order-status";
+import { getStatusByService, getTransporterOrderId, getStatusFromResponse } from "../../common/transporter.utils";
 import { getPriceEstimate, createOrder, getOrderLabel, cancelOrder } from "../../external-services/transporter";
 import { Order } from "../../models/order";
 import { Transporter } from "../../models/transporter";
-
-const getStatusByService = (service: string, statusCode: number | string): string => {
-  const code = statusCode.toString();
-  switch (service) {
-    case 'giaohangtietkiem':
-      return GHTKSTATUS[code] ?? '';
-    case 'viettelpost':
-      return VIETTELPOST_STATUS[code] ?? '';
-    default:
-      return '';
-  }
-}
 
 export const priceEstimateAction = async (
   request: Parse.Cloud.FunctionRequest
@@ -39,32 +27,6 @@ export const getOrderLabelAction = async (
   return getOrderLabel(service, data);
 }
 
-const getTransporterOrderId = (service: string, res: any): string => {
-  switch (service) {
-    case 'giaohangtietkiem':
-      return res.order?.label_id ?? '';
-    case 'viettelpost':
-      return res.data?.ORDER_NUMBER ?? '';
-    default:
-      return '';
-  }
-}
-
-const getTransporterStatus = (service: string, response: any): { status: string; statusCode: number } => {
-  switch (service) {
-    case 'giaohangtietkiem': {
-      const statusCode: number = response?.order?.status ?? 0;
-      return { status: getStatusByService(service, statusCode), statusCode };
-    }
-    case 'viettelpost': {
-      const statusCode: number = response?.data?.ORDER_STATUS ?? response?.status ?? 0;
-      return { status: getStatusByService(service, statusCode), statusCode };
-    }
-    default:
-      return { status: '', statusCode: 0 };
-  }
-}
-
 export const cancelOrderAction = async (
   request: Parse.Cloud.FunctionRequest
 ): Promise<any> => {
@@ -82,7 +44,8 @@ export const cancelOrderAction = async (
   const transporterService = transporter.get('service') || service;
   const id = getTransporterOrderId(transporterService, res);
   const response = await cancelOrder(transporterService, id);
-  const { status, statusCode } = getTransporterStatus(transporterService, response);
+  const statusCode = getStatusFromResponse(transporterService, response);
+  const status = getStatusByService(transporterService, statusCode);
   if (statusCode) {
     order.unset('transporter');
     order.save({}, { useMasterKey: true });

@@ -1,17 +1,5 @@
-import { GHTKSTATUS, VIETTELPOST_STATUS } from '../../constants/order-status';
+import { getStatusByService } from '../../common/transporter.utils';
 import { Transporter } from '../../models/transporter';
-
-const getStatusByService = (service: string, statusCode: number | string): string => {
-  const code = statusCode.toString();
-  switch (service) {
-    case 'giaohangtietkiem':
-      return GHTKSTATUS[code] ?? '';
-    case 'viettelpost':
-      return VIETTELPOST_STATUS[code] ?? '';
-    default:
-      return '';
-  }
-}
 
 const afterCreate = async (request: Parse.Cloud.AfterSaveRequest<Transporter>) => {
   const transporter = request.object;
