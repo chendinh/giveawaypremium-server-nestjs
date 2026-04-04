@@ -25,7 +25,7 @@ export class ViettelPost implements Transporter {
   }
 
   private handleError(functionName: string, error: Error): any {
-    logger.error(`ViettelPost ${functionName}. error: %s ${JSON.stringify(error)}`);
+    logger.error(`ViettelPost ${functionName}. error:`, error);
 
     throw error;
   }
