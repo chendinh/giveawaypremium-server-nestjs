@@ -4,6 +4,7 @@ import { ParseServer } from 'parse-server';
 import ParseDashboard from 'parse-dashboard';
 import { ConfigService } from '@nestjs/config';
 import * as path from 'path';
+import * as fs from 'fs';
 
 @Module({})
 export class ParseModule implements OnModuleInit {
@@ -26,6 +27,14 @@ export class ParseModule implements OnModuleInit {
       'CLOUD',
       path.resolve(__dirname, '../cloud/main.js')
     );
+
+    if (!fs.existsSync(cloudPath)) {
+      console.error(
+        `Cloud code file not found at: ${cloudPath}\n` +
+          `If using the default, ensure 'src/cloud/main.ts' exists and the project is built (npm run build).\n` +
+          `If using CLOUD env var, set it to the absolute path of the compiled cloud/main.js (e.g. /app/dist/cloud/main.js).`
+      );
+    }
 
     if (!process.env.SERVER_URL) {
       console.warn(
