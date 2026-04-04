@@ -1,10 +1,44 @@
-import { GHTKSTATUS, OrderRequestStatus } from '../../constants/order-status';
+import { GHTKSTATUS, VIETTELPOST_STATUS, OrderRequestStatus } from '../../constants/order-status';
 import { getOrder, cancelOrder } from '../../external-services/transporter';
 import { Order } from '../../models/order';
 import { OrderRequest } from '../../models/order.request';
 import { Product } from '../../models/product';
 import { Transporter } from '../../models/transporter';
 import { updateOrderRequestQueue } from '../order-request';
+
+const getStatusByService = (service: string, statusCode: number | string): string => {
+  const code = statusCode.toString();
+  switch (service) {
+    case 'giaohangtietkiem':
+      return GHTKSTATUS[code] ?? '';
+    case 'viettelpost':
+      return VIETTELPOST_STATUS[code] ?? '';
+    default:
+      return '';
+  }
+}
+
+const getTransporterOrderId = (service: string, res: any): string => {
+  switch (service) {
+    case 'giaohangtietkiem':
+      return res.order?.label_id ?? '';
+    case 'viettelpost':
+      return res.data?.ORDER_NUMBER ?? '';
+    default:
+      return '';
+  }
+}
+
+const getStatusFromResponse = (service: string, response: any): number => {
+  switch (service) {
+    case 'giaohangtietkiem':
+      return response?.order?.status ?? 0;
+    case 'viettelpost':
+      return response?.data?.ORDER_STATUS ?? response?.status ?? 0;
+    default:
+      return 0;
+  }
+}
 
 const updateStatusTransporter = async (order: Order) => {
   const transporterPointer = order.get('transporter') as Transporter;
@@ -13,14 +47,14 @@ const updateStatusTransporter = async (order: Order) => {
   }
   const transporter = await transporterPointer.fetch();
   const res = transporter.get('res');
-  const id = res.order?.label_id ?? '';
+  const service = transporter.get('service') || 'giaohangtietkiem';
+  const id = getTransporterOrderId(service, res);
   if (id) {
-    const response = await getOrder('giaohangtietkiem', id);
-
-    const status: number = response?.order?.status ?? 0;
-    if (status) {
+    const response = await getOrder(service, id);
+    const statusCode = getStatusFromResponse(service, response);
+    if (statusCode) {
       transporter.save({
-        status: GHTKSTATUS[status.toString()],
+        status: getStatusByService(service, statusCode),
         res: response
       }, { useMasterKey: true });
     } 
@@ -34,17 +68,18 @@ const cancelOrderTransporter = async (order: Order) => {
   }
   const transporter = await transporterPointer.fetch();
   const res = transporter.get('res');
-  const id = res.order?.label_id ?? '';
+  const service = transporter.get('service') || 'giaohangtietkiem';
+  const id = getTransporterOrderId(service, res);
   if (id) {
-    const response = await cancelOrder('giaohangtietkiem', id);
-    const status: number = response?.order?.status ?? 0;
+    const response = await cancelOrder(service, id);
+    const statusCode = getStatusFromResponse(service, response);
 
-    if (status) {
+    if (statusCode) {
       order.unset('transporter');
       order.save({}, { useMasterKey: true });
       transporter.unset('order');
       transporter.save({
-        status: GHTKSTATUS[status.toString()] ?? '',
+        status: getStatusByService(service, statusCode),
         res: response
       }, { useMasterKey: true });
     }

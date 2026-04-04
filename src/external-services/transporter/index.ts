@@ -1,14 +1,20 @@
 import { Order } from '../../models/order';
 import { GiaoHangTietKiem } from './giaohangtietkiem';
+import { ViettelPost } from './viettelpost';
 import { OrderReq, PriceEstimateReq } from './interface';
 
 export * from './giaohangtietkiem';
+export * from './viettelpost';
 
 export const getPriceEstimate = async (service: string, req: PriceEstimateReq): Promise<number> => {
   switch (service) {
     case 'giaohangtietkiem':
       const giaohangtietkiem = new GiaoHangTietKiem({});
       return giaohangtietkiem.getPriceEstimate(req);
+      break;
+    case 'viettelpost':
+      const viettelpost = new ViettelPost({});
+      return viettelpost.getPriceEstimate(req);
       break;
   
     default:
@@ -23,6 +29,10 @@ export const createOrder = async (service: string, req: OrderReq): Promise<any> 
       const giaohangtietkiem = new GiaoHangTietKiem({});
       return giaohangtietkiem.createOrder(req);
       break;
+    case 'viettelpost':
+      const viettelpost = new ViettelPost({});
+      return viettelpost.createOrder(req);
+      break;
   
     default:
       throw new Error('Transporter Service not support');
@@ -36,6 +46,10 @@ export const getOrder = async (service: string, id: string): Promise<any> => {
       const giaohangtietkiem = new GiaoHangTietKiem({});
       return giaohangtietkiem.getOrder(id);
       break;
+    case 'viettelpost':
+      const viettelpost = new ViettelPost({});
+      return viettelpost.getOrder(id);
+      break;
   
     default:
       throw new Error('Transporter Service not support');
@@ -48,6 +62,10 @@ export const cancelOrder = async (service: string, id: string): Promise<any> => 
     case 'giaohangtietkiem':
       const giaohangtietkiem = new GiaoHangTietKiem({});
       return giaohangtietkiem.cancelOrder(id);
+      break;
+    case 'viettelpost':
+      const viettelpost = new ViettelPost({});
+      return viettelpost.cancelOrder(id);
       break;
   
     default:
@@ -64,6 +82,13 @@ export const getOrderLabel = async (service: string, data: { orderId: string, or
       const label_id = order.get('transporter')?.get('res')?.order.label_id ?? '';
       const giaohangtietkiem = new GiaoHangTietKiem({});
       return giaohangtietkiem.getOrderLabel(label_id, { original: data.original, pageSize: data.pageSize });
+      break;
+    case 'viettelpost':
+      const vtpQuery = new Parse.Query(Order);
+      const vtpOrder = await vtpQuery.include('transporter').get(data.orderId);
+      const orderNumber = vtpOrder.get('transporter')?.get('res')?.data?.ORDER_NUMBER ?? '';
+      const viettelpost = new ViettelPost({});
+      return viettelpost.getOrderLabel(orderNumber);
       break;
   
     default:

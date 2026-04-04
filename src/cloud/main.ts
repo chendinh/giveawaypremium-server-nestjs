@@ -222,7 +222,7 @@ Parse.Cloud.define('transporter', tranporterAction, {
 		service: {
 			type: String,
 			options: val => {
-    		return ['giaohangtietkiem'].includes(val);
+    		return ['giaohangtietkiem', 'viettelpost'].includes(val);
 			},
 		},
 		action: {

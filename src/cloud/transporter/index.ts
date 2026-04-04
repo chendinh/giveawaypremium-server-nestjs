@@ -1,5 +1,17 @@
-import { GHTKSTATUS } from '../../constants/order-status';
+import { GHTKSTATUS, VIETTELPOST_STATUS } from '../../constants/order-status';
 import { Transporter } from '../../models/transporter';
+
+const getStatusByService = (service: string, statusCode: number | string): string => {
+  const code = statusCode.toString();
+  switch (service) {
+    case 'giaohangtietkiem':
+      return GHTKSTATUS[code] ?? '';
+    case 'viettelpost':
+      return VIETTELPOST_STATUS[code] ?? '';
+    default:
+      return '';
+  }
+}
 
 const afterCreate = async (request: Parse.Cloud.AfterSaveRequest<Transporter>) => {
   const transporter = request.object;
@@ -10,9 +22,19 @@ const afterCreate = async (request: Parse.Cloud.AfterSaveRequest<Transporter>) =
 const beforeCreate = async(request: Parse.Cloud.BeforeSaveRequest<Transporter>) => {
   const tran = request.object;
   const res = tran.get('res');
-  const status: number = res.order?.status ?? 0;
-  tran.set('status', GHTKSTATUS[status.toString()] ?? '');
+  const service = tran.get('service') || 'giaohangtietkiem';
 
+  let statusCode: number;
+  switch (service) {
+    case 'viettelpost':
+      statusCode = res?.data?.ORDER_STATUS ?? res?.status ?? 0;
+      break;
+    case 'giaohangtietkiem':
+    default:
+      statusCode = res?.order?.status ?? 0;
+      break;
+  }
+  tran.set('status', getStatusByService(service, statusCode));
 }
 
 const beforeSave = async(request: Parse.Cloud.BeforeSaveRequest<Transporter>) => {
