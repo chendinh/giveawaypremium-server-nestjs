@@ -52,7 +52,8 @@ export class ParseModule implements OnModuleInit {
       javascriptKey: this.get('JAVASCRIPT_KEY', 'myJavascriptKey'),
       restAPIKey: this.get('REST_API_KEY', 'myRestAPIKey'),
       serverURL,
-      allowClientClassCreation: true,
+      allowClientClassCreation:
+        this.configService.get('ALLOW_CLIENT_CLASS_CREATION') !== 'false',
       liveQuery: {
         classNames: ['Channel'],
       },
