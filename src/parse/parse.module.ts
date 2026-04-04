@@ -3,6 +3,7 @@ import { HttpAdapterHost } from '@nestjs/core';
 import { ParseServer } from 'parse-server';
 import ParseDashboard from 'parse-dashboard';
 import { ConfigService } from '@nestjs/config';
+import * as path from 'path';
 
 @Module({})
 export class ParseModule implements OnModuleInit {
@@ -11,12 +12,24 @@ export class ParseModule implements OnModuleInit {
     private readonly configService: ConfigService
   ) {}
 
+  private get<T = string>(key: string, fallback: T): T {
+    return this.configService.get<T>(key) ?? fallback;
+  }
+
   onModuleInit() {
     const app = this.httpAdapterHost.httpAdapter.getInstance();
 
+    const serverURL = this.get('SERVER_URL', 'http://localhost:1337/api');
+    const appId = this.get('APP_ID', 'myAppId');
+    const masterKey = this.get('MASTER_KEY', 'myMasterKey');
+    const cloudPath = this.get(
+      'CLOUD',
+      path.resolve(__dirname, '../cloud/main.js')
+    );
+
     if (!process.env.SERVER_URL) {
       console.warn(
-        'SERVER_URL not set, using default https://hammerhead-app-dcydg.ondigitalocean.app/api'
+        `SERVER_URL not set, using default: ${serverURL}`
       );
     }
 
@@ -28,14 +41,18 @@ export class ParseModule implements OnModuleInit {
     }
 
     const api = new ParseServer({
-      databaseURI: this.configService.get('DATABASE_URI'),
-      cloud: this.configService.get('CLOUD'),
-      appId: this.configService.get('APP_ID'),
-      masterKey: this.configService.get('MASTER_KEY'),
-      clientKey: this.configService.get('CLIENT_KEY'),
-      javascriptKey: this.configService.get('JAVASCRIPT_KEY'),
-      restAPIKey: this.configService.get('REST_API_KEY'),
-      serverURL: this.configService.get('SERVER_URL'),
+      databaseURI: this.get(
+        'DATABASE_URI',
+        'mongodb://localhost:27017/giveawaypremium'
+      ),
+      cloud: cloudPath,
+      appId,
+      masterKey,
+      clientKey: this.get('CLIENT_KEY', 'myClientKey'),
+      javascriptKey: this.get('JAVASCRIPT_KEY', 'myJavascriptKey'),
+      restAPIKey: this.get('REST_API_KEY', 'myRestAPIKey'),
+      serverURL,
+      allowClientClassCreation: true,
       liveQuery: {
         classNames: ['Channel'],
       },
@@ -44,20 +61,23 @@ export class ParseModule implements OnModuleInit {
       {
         apps: [
           {
-            serverURL: this.configService.get('SERVER_URL'),
-            appId: this.configService.get('APP_ID'),
-            masterKey: this.configService.get('MASTER_KEY'),
-            appName: this.configService.get('APP_NAME'),
+            serverURL,
+            appId,
+            masterKey,
+            appName: this.get('APP_NAME', 'GiveawayPremium'),
           },
         ],
         users: [
           {
-            user: this.configService.get('PARSE_DASHBOARD_USERNAME'),
-            pass: this.configService.get('PARSE_DASHBOARD_PASSWORD'),
+            user: this.get('PARSE_DASHBOARD_USERNAME', 'admin'),
+            pass: this.get(
+              'PARSE_DASHBOARD_PASSWORD',
+              'admin@giveawaypremium2021'
+            ),
           },
         ],
         trustProxy: parseInt(
-          this.configService.get('PARSE_DASHBOARD_TRUST_PROXY') || '1'
+          this.get('PARSE_DASHBOARD_TRUST_PROXY', '1')
         ),
         useEncryptedPasswords:
           this.configService.get('PARSE_DASHBOARD_ENCRYPTED') === 'true',
@@ -67,14 +87,20 @@ export class ParseModule implements OnModuleInit {
           this.configService.get('PARSE_DASHBOARD_INSECURE_HTTP') === 'false'
             ? false
             : true,
-        cookieSessionSecret: this.configService.get(
-          'PARSE_DASHBOARD_COOKIE_SESSION_SECRET'
+        cookieSessionSecret: this.get(
+          'PARSE_DASHBOARD_COOKIE_SESSION_SECRET',
+          'myCookieSessionSecret'
         ),
       }
     );
 
     app.use('/api', api.app);
     app.use('/dashboard', dashboard);
+
+    console.log(`Parse Server running at ${serverURL}`);
+    console.log(`Parse Dashboard at /dashboard`);
+    console.log(`App ID: ${appId}`);
+
     // Create LiveQuery server
     const httpServer = this.httpAdapterHost.httpAdapter.getHttpServer();
     ParseServer.createLiveQueryServer(httpServer);
