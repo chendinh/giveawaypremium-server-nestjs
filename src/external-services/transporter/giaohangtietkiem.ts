@@ -1,5 +1,5 @@
 import logger from '../../plugins/logger';
-import { OrderReq, PriceEstimateReq, Transporter, TransporterOption } from './interface';
+import { OrderReq, PriceEstimateReq, Transporter, TransporterOption, CreateOrderResult, OrderLabelOptions } from './interface';
 import fetch, { Response } from 'node-fetch';
 import { URLSearchParams } from 'url';
 import { ghtkConfigs } from '../../config/ghtk.config';
@@ -9,7 +9,7 @@ import { generate } from "randomstring";
 const { ghtkToken, ghtkUrl } = ghtkConfigs;
 
 export class GiaoHangTietKiem implements Transporter {
-  constructor(options: TransporterOption) {
+  constructor(_options: TransporterOption) {
 		
 	}
 
@@ -26,7 +26,7 @@ export class GiaoHangTietKiem implements Transporter {
     return json;
   }
 
-  private handleError(functionName: string, error: Error): any {
+  private handleError(functionName: string, error: Error): never {
     logger.error(`GiaoHangTietKiem ${functionName}. error: %s ${JSON.stringify(error)}`);
 
     throw error;
@@ -58,7 +58,7 @@ export class GiaoHangTietKiem implements Transporter {
     }
   }
 
-  public async createOrder(req: OrderReq): Promise<any> {
+  public async createOrder(req: OrderReq): Promise<CreateOrderResult> {
     try {
       const { from, to, value, serviceLevel, note, orderRequest } = req
       const products = req.items.map((item) => pickBy({
@@ -111,7 +111,7 @@ export class GiaoHangTietKiem implements Transporter {
     }
   }
 
-  public async getOrder(id: string): Promise<any> {
+  public async getOrder(id: string): Promise<unknown> {
     try {
       const result = await fetch(`${ghtkUrl}/services/shipment/v2/${id}`, { method: 'GET', headers: { Token: ghtkToken} });
       const json = await this.hanldeFetchResponse(result);
@@ -122,7 +122,7 @@ export class GiaoHangTietKiem implements Transporter {
     }
   }
 
-  public async cancelOrder(id: string): Promise<any> {
+  public async cancelOrder(id: string): Promise<unknown> {
     try {
       await fetch(`${ghtkUrl}/services/shipment/cancel/${id}`, { method: 'POST', headers: { Token: ghtkToken} });
 
@@ -131,7 +131,7 @@ export class GiaoHangTietKiem implements Transporter {
       return this.handleError('cancelOrder', error as Error);
     }
   }
-  public async getOrderLabel(id: string, options?: { original?: 'portrait' | 'landscape', pageSize?: 'A5' | 'A6' }): Promise<any> {
+  public async getOrderLabel(id: string, options?: OrderLabelOptions): Promise<string> {
     try {
       const original = options?.original ?? 'portrait';
       const pageSize = options?.pageSize ?? 'A6';

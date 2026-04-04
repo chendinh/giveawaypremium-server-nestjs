@@ -18,6 +18,7 @@ import { findAll } from './nhanh-category';
 import { activeCampaign } from './job/campaign';
 import { getAdministativeUnits } from './function/administrative-units';
 import { tranporterAction } from './function/transporter';
+import { TransporterService } from '../external-services/transporter/interface';
 import { requestOrderGuest } from './function/guest-order';
 import { remiderIndividualConsignment, reminderConsignmentGroup } from './function/mail';
 
@@ -221,8 +222,8 @@ Parse.Cloud.define('transporter', tranporterAction, {
 	fields: {
 		service: {
 			type: String,
-			options: val => {
-    		return ['giaohangtietkiem', 'viettelpost'].includes(val);
+			options: (val: string) => {
+    		return Object.values(TransporterService).includes(val as TransporterService);
 			},
 		},
 		action: {

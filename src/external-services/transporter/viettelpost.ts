@@ -1,5 +1,15 @@
 import logger from '../../plugins/logger';
-import { OrderReq, PriceEstimateReq, Transporter, TransporterOption } from './interface';
+import {
+  OrderReq, PriceEstimateReq, Transporter, TransporterOption,
+  CreateOrderResult, LoginResult, LongTokenResult, OrderLabelOptions,
+} from './interface';
+import {
+  ViettelPostApiResponse, ViettelPostLoginReq, ViettelPostLoginData,
+  ViettelPostLongTokenData, ViettelPostPriceEstimateReq,
+  ViettelPostPriceEstimateItem, ViettelPostCreateOrderReq,
+  ViettelPostCreateOrderData, ViettelPostUpdateOrderReq,
+  ViettelPostOrderData, ViettelPostPrintReq, ViettelPostOrderItem,
+} from './viettelpost.types';
 import fetch, { Response } from 'node-fetch';
 import { viettelpostConfigs } from '../../config/viettelpost.config';
 import { pickBy, identity } from 'lodash';
@@ -9,18 +19,16 @@ const { viettelpostToken, viettelpostUrl, viettelpostUsername, viettelpostPasswo
 let cachedToken: string = viettelpostToken;
 
 export class ViettelPost implements Transporter {
-  constructor(options: TransporterOption) {
-
-  }
+  constructor(_options: TransporterOption) {}
 
   private getToken(): string {
     return cachedToken || viettelpostToken;
   }
 
-  private async handleFetchResponse(response: Response): Promise<any> {
+  private async handleFetchResponse<T = unknown>(response: Response): Promise<ViettelPostApiResponse<T>> {
     const status = response.status;
     if (status === 500) throw new Error(response.statusText);
-    const json = await response.json();
+    const json = (await response.json()) as ViettelPostApiResponse<T>;
 
     if (status !== 200 || json.status !== 200) {
       logger.error(json);
@@ -30,9 +38,8 @@ export class ViettelPost implements Transporter {
     return json;
   }
 
-  private handleError(functionName: string, error: Error): any {
+  private handleError(functionName: string, error: Error): never {
     logger.error(`ViettelPost ${functionName}. error:`, error);
-
     throw error;
   }
 
@@ -40,7 +47,7 @@ export class ViettelPost implements Transporter {
    * Login with username/password to get a short-lived access token.
    * ViettelPost API: POST /user/Login
    */
-  public async login(username?: string, password?: string): Promise<any> {
+  public async login(username?: string, password?: string): Promise<LoginResult> {
     try {
       const user = username || viettelpostUsername;
       const pass = password || viettelpostPassword;
@@ -49,18 +56,15 @@ export class ViettelPost implements Transporter {
         throw new Error('ViettelPost username and password are required for login');
       }
 
+      const body: ViettelPostLoginReq = { USERNAME: user, PASSWORD: pass };
+
       const result = await fetch(`${viettelpostUrl}/user/Login`, {
         method: 'POST',
-        body: JSON.stringify({
-          USERNAME: user,
-          PASSWORD: pass,
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json' },
       });
 
-      const json = await this.handleFetchResponse(result);
+      const json = await this.handleFetchResponse<ViettelPostLoginData>(result);
       const token = json.data?.token ?? '';
 
       if (token) {
@@ -82,7 +86,7 @@ export class ViettelPost implements Transporter {
    * Exchange a short-lived token for a long-lived token.
    * ViettelPost API: POST /user/ownerconnect
    */
-  public async getLongToken(shortToken?: string): Promise<any> {
+  public async getLongToken(shortToken?: string): Promise<LongTokenResult> {
     try {
       const token = shortToken || this.getToken();
 
@@ -92,13 +96,10 @@ export class ViettelPost implements Transporter {
 
       const result = await fetch(`${viettelpostUrl}/user/ownerconnect`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Token': token,
-        },
+        headers: { 'Content-Type': 'application/json', 'Token': token },
       });
 
-      const json = await this.handleFetchResponse(result);
+      const json = await this.handleFetchResponse<ViettelPostLongTokenData>(result);
       const longToken = json.data?.token ?? '';
 
       if (longToken) {
@@ -117,7 +118,7 @@ export class ViettelPost implements Transporter {
   public async getPriceEstimate(req: PriceEstimateReq): Promise<number> {
     try {
       const { from, to, weight, value, serviceLevel } = req;
-      const data = {
+      const data: ViettelPostPriceEstimateReq = {
         PRODUCT_WEIGHT: weight,
         PRODUCT_PRICE: value,
         MONEY_COLLECTION: 0,
@@ -134,30 +135,27 @@ export class ViettelPost implements Transporter {
       const result = await fetch(`${viettelpostUrl}/order/getPriceAll`, {
         method: 'POST',
         body: JSON.stringify(data),
-        headers: {
-          'Content-Type': 'application/json',
-          'Token': this.getToken(),
-        },
+        headers: { 'Content-Type': 'application/json', 'Token': this.getToken() },
       });
-      const json = await this.handleFetchResponse(result);
-      const fee = Array.isArray(json) 
-        ? json[0]?.GIA_CUOC ?? 0
-        : json.data?.[0]?.GIA_CUOC ?? 0;
+      const json = await this.handleFetchResponse<ViettelPostPriceEstimateItem[]>(result);
+      const fee = Array.isArray(json.data)
+        ? json.data[0]?.GIA_CUOC ?? 0
+        : 0;
 
-      return fee as number;
+      return fee;
     } catch (error) {
       return this.handleError('getPriceEstimate', error as Error);
     }
   }
 
-  public async createOrder(req: OrderReq): Promise<any> {
+  public async createOrder(req: OrderReq): Promise<CreateOrderResult> {
     try {
       const { from, to, value, serviceLevel, note, orderRequest, items } = req;
       const productName = items.map(item => item.name).join(', ');
       const productWeight = items.reduce((sum, item) => sum + item.weight * item.quantity, 0);
       const productQty = items.reduce((sum, item) => sum + item.quantity, 0);
 
-      let order: any = {
+      let order: ViettelPostCreateOrderReq = {
         SENDER_FULLNAME: from.name,
         SENDER_ADDRESS: from.address,
         SENDER_PHONE: from.phone,
@@ -179,7 +177,7 @@ export class ViettelPost implements Transporter {
         ORDER_SERVICE: serviceLevel || 'VCN',
         ORDER_NOTE: note || '',
         MONEY_COLLECTION: req.codMoney ?? 0,
-        LIST_ITEM: items.map(item => pickBy({
+        LIST_ITEM: items.map(item => pickBy<Partial<ViettelPostOrderItem>>({
           PRODUCT_NAME: item.name,
           PRODUCT_WEIGHT: item.weight,
           PRODUCT_QUANTITY: item.quantity,
@@ -188,22 +186,16 @@ export class ViettelPost implements Transporter {
       };
 
       if (orderRequest) {
-        order = {
-          ...order,
-          ...orderRequest,
-        };
+        order = { ...order, ...orderRequest };
       }
 
-      const body = pickBy(order, identity);
+      const body = pickBy(order, identity) as Partial<ViettelPostCreateOrderReq>;
       const result = await fetch(`${viettelpostUrl}/order/createOrder`, {
         method: 'POST',
         body: JSON.stringify(body),
-        headers: {
-          'Content-Type': 'application/json',
-          'Token': this.getToken(),
-        },
+        headers: { 'Content-Type': 'application/json', 'Token': this.getToken() },
       });
-      const json = await this.handleFetchResponse(result);
+      const json = await this.handleFetchResponse<ViettelPostCreateOrderData>(result);
       const orderNumber: string = json.data?.ORDER_NUMBER ?? '';
       const res = await this.getOrder(orderNumber);
       return { req, body, res, success: true };
@@ -212,23 +204,18 @@ export class ViettelPost implements Transporter {
     }
   }
 
-  public async getOrder(id: string): Promise<any> {
+  public async getOrder(id: string): Promise<ViettelPostApiResponse<ViettelPostOrderData>> {
     try {
+      const body: ViettelPostUpdateOrderReq = { TYPE: 0, ORDER_NUMBER: id };
       const result = await fetch(`${viettelpostUrl}/order/UpdateOrder`, {
         method: 'POST',
-        body: JSON.stringify({
-          TYPE: 0,
-          ORDER_NUMBER: id,
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-          'Token': this.getToken(),
-        },
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json', 'Token': this.getToken() },
       });
 
       const status = result.status;
       if (status === 500) throw new Error(result.statusText);
-      const json = await result.json();
+      const json = (await result.json()) as ViettelPostApiResponse<ViettelPostOrderData>;
 
       return json;
     } catch (error) {
@@ -236,24 +223,22 @@ export class ViettelPost implements Transporter {
     }
   }
 
-  public async cancelOrder(id: string): Promise<any> {
+  public async cancelOrder(id: string): Promise<ViettelPostApiResponse<ViettelPostOrderData>> {
     try {
+      const body: ViettelPostUpdateOrderReq = {
+        TYPE: 4,
+        ORDER_NUMBER: id,
+        NOTE: 'Hủy đơn hàng',
+      };
       const result = await fetch(`${viettelpostUrl}/order/UpdateOrder`, {
         method: 'POST',
-        body: JSON.stringify({
-          TYPE: 4,
-          ORDER_NUMBER: id,
-          NOTE: 'Hủy đơn hàng',
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-          'Token': this.getToken(),
-        },
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json', 'Token': this.getToken() },
       });
 
       const status = result.status;
       if (status === 500) throw new Error(result.statusText);
-      const json = await result.json();
+      const json = (await result.json()) as ViettelPostApiResponse<ViettelPostOrderData>;
 
       if (json.status !== 200) {
         logger.error(json);
@@ -266,18 +251,13 @@ export class ViettelPost implements Transporter {
     }
   }
 
-  public async getOrderLabel(id: string, options?: { original?: 'portrait' | 'landscape', pageSize?: 'A5' | 'A6' }): Promise<any> {
+  public async getOrderLabel(id: string, _options?: OrderLabelOptions): Promise<string> {
     try {
+      const body: ViettelPostPrintReq = { TYPE: 1, ORDER_ARRAY: [id] };
       const result = await fetch(`${viettelpostUrl}/order/encryptLinkPrint`, {
         method: 'POST',
-        body: JSON.stringify({
-          TYPE: 1,
-          ORDER_ARRAY: [id],
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-          'Token': this.getToken(),
-        },
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json', 'Token': this.getToken() },
       });
 
       const status = result.status;
@@ -286,7 +266,7 @@ export class ViettelPost implements Transporter {
         const message = result.statusText ?? 'request Failed';
         throw new Error(message);
       }
-      const json = await result.json();
+      const json = (await result.json()) as ViettelPostApiResponse<unknown>;
 
       if (json.status !== 200) {
         throw new Error(json.message || 'Get label failed');

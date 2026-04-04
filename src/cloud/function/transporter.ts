@@ -1,5 +1,6 @@
 import { getStatusByService, getTransporterOrderId, getStatusFromResponse } from "../../common/transporter.utils";
 import { getPriceEstimate, createOrder, getOrderLabel, cancelOrder, loginTransporter, getLongToken } from "../../external-services/transporter";
+import { CreateOrderResult, LoginResult, LongTokenResult } from "../../external-services/transporter/interface";
 import { Order } from "../../models/order";
 import { Transporter } from "../../models/transporter";
 
@@ -13,7 +14,7 @@ export const priceEstimateAction = async (
 
 export const createOrderAction = async (
   request: Parse.Cloud.FunctionRequest
-): Promise<any> => {
+): Promise<CreateOrderResult> => {
   const { params } = request;
   const { service, data } = params;
   return createOrder(service, data);
@@ -21,7 +22,7 @@ export const createOrderAction = async (
 
 export const getOrderLabelAction = async (
   request: Parse.Cloud.FunctionRequest
-): Promise<any> => {
+): Promise<unknown> => {
   const { params } = request;
   const { service, data } = params;
   return getOrderLabel(service, data);
@@ -29,7 +30,7 @@ export const getOrderLabelAction = async (
 
 export const loginAction = async (
   request: Parse.Cloud.FunctionRequest
-): Promise<any> => {
+): Promise<LoginResult> => {
   const { params } = request;
   const { service, data } = params;
   return loginTransporter(service, data);
@@ -37,7 +38,7 @@ export const loginAction = async (
 
 export const getLongTokenAction = async (
   request: Parse.Cloud.FunctionRequest
-): Promise<any> => {
+): Promise<LongTokenResult> => {
   const { params } = request;
   const { service, data } = params;
   return getLongToken(service, data);
@@ -45,7 +46,7 @@ export const getLongTokenAction = async (
 
 export const cancelOrderAction = async (
   request: Parse.Cloud.FunctionRequest
-): Promise<any> => {
+): Promise<unknown> => {
   const { params } = request;
   const { service, data } = params;
   const { orderId } = data;
@@ -76,7 +77,7 @@ export const cancelOrderAction = async (
 
 export const tranporterAction = async (
   request: Parse.Cloud.FunctionRequest
-): Promise<any> => {
+): Promise<unknown> => {
   const { params } = request;
   const { action } = params;
 
