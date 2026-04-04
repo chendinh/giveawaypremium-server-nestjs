@@ -16,8 +16,8 @@ export class ParseModule implements OnModuleInit {
     return this.configService.get<T>(key) ?? fallback;
   }
 
-  onModuleInit() {
-    const app = this.httpAdapterHost.httpAdapter.getInstance();
+  async onModuleInit() {
+    const expressApp = this.httpAdapterHost.httpAdapter.getInstance();
 
     const serverURL = this.get('SERVER_URL', 'http://localhost:1337/api');
     const appId = this.get('APP_ID', 'myAppId');
@@ -40,7 +40,7 @@ export class ParseModule implements OnModuleInit {
       );
     }
 
-    const api = new ParseServer({
+    const parseServer = new ParseServer({
       databaseURI: this.get(
         'DATABASE_URI',
         'mongodb://localhost:27017/giveawaypremium'
@@ -58,6 +58,10 @@ export class ParseModule implements OnModuleInit {
         classNames: ['Channel'],
       },
     });
+
+    // Parse Server 6.0+ requires start() to initialize internal state
+    await parseServer.start();
+
     const dashboard = new ParseDashboard(
       {
         apps: [
@@ -95,8 +99,8 @@ export class ParseModule implements OnModuleInit {
       }
     );
 
-    app.use('/api', api.app);
-    app.use('/dashboard', dashboard);
+    expressApp.use('/api', parseServer.app);
+    expressApp.use('/dashboard', dashboard);
 
     console.log(`Parse Server running at ${serverURL}`);
     console.log(`Parse Dashboard at /dashboard`);
