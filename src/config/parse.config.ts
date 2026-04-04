@@ -3,7 +3,7 @@ import * as path from 'path';
 export const parseServerConfig = {
   databaseURI:
     process.env.DATABASE_URI ||
-    'mongodb+srv://giveawaypremium:1phoducchinh@cluster1.vsjnk.mongodb.net/myFirstDatabase?retryWrites=true&w=majority&appName=Cluster1',
+    'mongodb://localhost:27017/giveawaypremium',
   cloud: process.env.CLOUD || path.resolve(__dirname, '../cloud/main.js'),
   appId: process.env.APP_ID || 'myAppId',
   masterKey: process.env.MASTER_KEY || 'myMasterKey',
@@ -11,8 +11,7 @@ export const parseServerConfig = {
   javascriptKey: process.env.JAVASCRIPT_KEY || 'myJavascriptKey',
   restAPIKey: process.env.REST_API_KEY || 'myRestAPIKey',
   serverURL:
-    process.env.SERVER_URL ||
-    'https://hammerhead-app-dcydg.ondigitalocean.app/api',
+    process.env.SERVER_URL || 'http://localhost:1337/parse',
   liveQuery: {
     classNames: ['Channel'],
   },
@@ -22,8 +21,7 @@ export const parseDashboardConfig = {
   apps: [
     {
       serverURL:
-        process.env.SERVER_URL ||
-        'https://hammerhead-app-dcydg.ondigitalocean.app/api',
+        process.env.SERVER_URL || 'http://localhost:1337/parse',
       appId: process.env.APP_ID || 'myAppId',
       masterKey: process.env.MASTER_KEY || 'myMasterKey',
       appName: process.env.APP_NAME || 'GiveawayPremium',
@@ -31,7 +29,7 @@ export const parseDashboardConfig = {
   ],
   users: [
     {
-      user: process.env.PARSE_DASHBOARD_USERNAME || 'administrator',
+      user: process.env.PARSE_DASHBOARD_USERNAME || 'admin',
       pass: process.env.PARSE_DASHBOARD_PASSWORD || 'admin@giveawaypremium2021',
     },
   ],
