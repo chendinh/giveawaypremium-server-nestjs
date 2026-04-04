@@ -228,7 +228,7 @@ Parse.Cloud.define('transporter', tranporterAction, {
 		action: {
 			type: String,
 			options: val => {
-    		return ['PRICE_ESTIMATE', 'CREATE_ORDER', 'GET_ORDER_LABEL', 'CANCEL_ORDER'].includes(val);
+    		return ['PRICE_ESTIMATE', 'CREATE_ORDER', 'GET_ORDER_LABEL', 'CANCEL_ORDER', 'LOGIN', 'GET_LONG_TOKEN'].includes(val);
 			},
 		},
 		data: { type: Object },

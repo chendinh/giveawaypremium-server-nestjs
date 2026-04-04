@@ -4,11 +4,17 @@ import fetch, { Response } from 'node-fetch';
 import { viettelpostConfigs } from '../../config/viettelpost.config';
 import { pickBy, identity } from 'lodash';
 
-const { viettelpostToken, viettelpostUrl } = viettelpostConfigs;
+const { viettelpostToken, viettelpostUrl, viettelpostUsername, viettelpostPassword } = viettelpostConfigs;
+
+let cachedToken: string = viettelpostToken;
 
 export class ViettelPost implements Transporter {
   constructor(options: TransporterOption) {
 
+  }
+
+  private getToken(): string {
+    return cachedToken || viettelpostToken;
   }
 
   private async handleFetchResponse(response: Response): Promise<any> {
@@ -28,6 +34,84 @@ export class ViettelPost implements Transporter {
     logger.error(`ViettelPost ${functionName}. error:`, error);
 
     throw error;
+  }
+
+  /**
+   * Login with username/password to get a short-lived access token.
+   * ViettelPost API: POST /user/Login
+   */
+  public async login(username?: string, password?: string): Promise<any> {
+    try {
+      const user = username || viettelpostUsername;
+      const pass = password || viettelpostPassword;
+
+      if (!user || !pass) {
+        throw new Error('ViettelPost username and password are required for login');
+      }
+
+      const result = await fetch(`${viettelpostUrl}/user/Login`, {
+        method: 'POST',
+        body: JSON.stringify({
+          USERNAME: user,
+          PASSWORD: pass,
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const json = await this.handleFetchResponse(result);
+      const token = json.data?.token ?? '';
+
+      if (token) {
+        cachedToken = token;
+      }
+
+      return {
+        token,
+        userId: json.data?.userId,
+        source: json.data?.source,
+        expired: json.data?.expired,
+      };
+    } catch (error) {
+      return this.handleError('login', error as Error);
+    }
+  }
+
+  /**
+   * Exchange a short-lived token for a long-lived token.
+   * ViettelPost API: POST /user/ownerconnect
+   */
+  public async getLongToken(shortToken?: string): Promise<any> {
+    try {
+      const token = shortToken || this.getToken();
+
+      if (!token) {
+        throw new Error('A short-lived token is required. Please login first.');
+      }
+
+      const result = await fetch(`${viettelpostUrl}/user/ownerconnect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Token': token,
+        },
+      });
+
+      const json = await this.handleFetchResponse(result);
+      const longToken = json.data?.token ?? '';
+
+      if (longToken) {
+        cachedToken = longToken;
+      }
+
+      return {
+        token: longToken,
+        expired: json.data?.expired,
+      };
+    } catch (error) {
+      return this.handleError('getLongToken', error as Error);
+    }
   }
 
   public async getPriceEstimate(req: PriceEstimateReq): Promise<number> {
@@ -52,7 +136,7 @@ export class ViettelPost implements Transporter {
         body: JSON.stringify(data),
         headers: {
           'Content-Type': 'application/json',
-          'Token': viettelpostToken,
+          'Token': this.getToken(),
         },
       });
       const json = await this.handleFetchResponse(result);
@@ -116,7 +200,7 @@ export class ViettelPost implements Transporter {
         body: JSON.stringify(body),
         headers: {
           'Content-Type': 'application/json',
-          'Token': viettelpostToken,
+          'Token': this.getToken(),
         },
       });
       const json = await this.handleFetchResponse(result);
@@ -138,7 +222,7 @@ export class ViettelPost implements Transporter {
         }),
         headers: {
           'Content-Type': 'application/json',
-          'Token': viettelpostToken,
+          'Token': this.getToken(),
         },
       });
 
@@ -163,7 +247,7 @@ export class ViettelPost implements Transporter {
         }),
         headers: {
           'Content-Type': 'application/json',
-          'Token': viettelpostToken,
+          'Token': this.getToken(),
         },
       });
 
@@ -192,7 +276,7 @@ export class ViettelPost implements Transporter {
         }),
         headers: {
           'Content-Type': 'application/json',
-          'Token': viettelpostToken,
+          'Token': this.getToken(),
         },
       });
 

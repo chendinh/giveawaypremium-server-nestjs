@@ -96,3 +96,29 @@ export const getOrderLabel = async (service: string, data: { orderId: string, or
       break;
   }
 }
+
+export const loginTransporter = async (service: string, data?: { username?: string, password?: string }): Promise<any> => {
+  switch (service) {
+    case 'viettelpost':
+      const viettelpost = new ViettelPost({});
+      return viettelpost.login(data?.username, data?.password);
+      break;
+  
+    default:
+      throw new Error('Login not supported for this transporter service');
+      break;
+  }
+}
+
+export const getLongToken = async (service: string, data?: { token?: string }): Promise<any> => {
+  switch (service) {
+    case 'viettelpost':
+      const viettelpost = new ViettelPost({});
+      return viettelpost.getLongToken(data?.token);
+      break;
+  
+    default:
+      throw new Error('Long token not supported for this transporter service');
+      break;
+  }
+}

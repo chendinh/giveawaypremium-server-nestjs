@@ -1,5 +1,5 @@
 import { getStatusByService, getTransporterOrderId, getStatusFromResponse } from "../../common/transporter.utils";
-import { getPriceEstimate, createOrder, getOrderLabel, cancelOrder } from "../../external-services/transporter";
+import { getPriceEstimate, createOrder, getOrderLabel, cancelOrder, loginTransporter, getLongToken } from "../../external-services/transporter";
 import { Order } from "../../models/order";
 import { Transporter } from "../../models/transporter";
 
@@ -25,6 +25,22 @@ export const getOrderLabelAction = async (
   const { params } = request;
   const { service, data } = params;
   return getOrderLabel(service, data);
+}
+
+export const loginAction = async (
+  request: Parse.Cloud.FunctionRequest
+): Promise<any> => {
+  const { params } = request;
+  const { service, data } = params;
+  return loginTransporter(service, data);
+}
+
+export const getLongTokenAction = async (
+  request: Parse.Cloud.FunctionRequest
+): Promise<any> => {
+  const { params } = request;
+  const { service, data } = params;
+  return getLongToken(service, data);
 }
 
 export const cancelOrderAction = async (
@@ -96,6 +112,12 @@ export const tranporterAction = async (
       const tran = await cancelOrderAction(request);
 
       return tran
+      break;
+    case 'LOGIN':
+      return loginAction(request);
+      break;
+    case 'GET_LONG_TOKEN':
+      return getLongTokenAction(request);
       break;
     default:
       throw new Error('Action not support');
