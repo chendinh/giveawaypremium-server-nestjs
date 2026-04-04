@@ -9,8 +9,8 @@ async function bootstrap() {
     methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS', 'PATCH'],
     credentials: true,
     preflightContinue: false,
-    origin: '*',
-    optionsSuccessStatus: 204,
+    origin: true,
+    optionsSuccessStatus: 200,
   });
   const port = process.env.PORT || 1337;
   await app.listen(port);
