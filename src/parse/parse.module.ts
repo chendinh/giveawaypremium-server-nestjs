@@ -29,7 +29,7 @@ export class ParseModule implements OnModuleInit {
 
     const api = new ParseServer({
       databaseURI: this.configService.get('DATABASE_URI'),
-      cloud: this.configService.get('CLOUD'),
+      cloud: this.configService.get('CLOUD') ||  './dist/cloud/main.js',
       appId: this.configService.get('APP_ID'),
       masterKey: this.configService.get('MASTER_KEY'),
       clientKey: this.configService.get('CLIENT_KEY'),
@@ -40,6 +40,9 @@ export class ParseModule implements OnModuleInit {
         classNames: ['Channel'],
       },
     });
+
+    api.start()
+
     const dashboard = new ParseDashboard(
       {
         apps: [
@@ -73,7 +76,7 @@ export class ParseModule implements OnModuleInit {
       }
     );
 
-    app.use('/api', api.app);
+    app.use('/parse', api.app);
     app.use('/dashboard', dashboard);
     // Create LiveQuery server
     const httpServer = this.httpAdapterHost.httpAdapter.getHttpServer();
