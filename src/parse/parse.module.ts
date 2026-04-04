@@ -20,12 +20,12 @@ export class ParseModule implements OnModuleInit {
   async onModuleInit() {
     const expressApp = this.httpAdapterHost.httpAdapter.getInstance();
 
-    const serverURL = this.get('SERVER_URL', 'http://localhost:1337/api');
+    const serverURL = this.get('SERVER_URL', 'http://localhost:1337/parse');
     const appId = this.get('APP_ID', 'myAppId');
     const masterKey = this.get('MASTER_KEY', 'myMasterKey');
     const cloudPath = this.get(
       'CLOUD',
-      path.resolve(__dirname, '../cloud/main.js')
+      '../cloud/main.js'
     );
 
     if (!fs.existsSync(cloudPath)) {
@@ -35,6 +35,8 @@ export class ParseModule implements OnModuleInit {
           `If using CLOUD env var, set it to the absolute path of the compiled cloud/main.js (e.g. /app/dist/cloud/main.js).`
       );
     }
+
+    console.log('__dirname', __dirname)
 
     if (!process.env.SERVER_URL) {
       console.warn(
@@ -54,7 +56,7 @@ export class ParseModule implements OnModuleInit {
         'DATABASE_URI',
         'mongodb://localhost:27017/giveawaypremium'
       ),
-      cloud: cloudPath,
+      // cloud: cloudPath || __dirname + '/cloud/main.js',
       appId,
       masterKey,
       clientKey: this.get('CLIENT_KEY', 'myClientKey'),
@@ -108,7 +110,7 @@ export class ParseModule implements OnModuleInit {
       }
     );
 
-    expressApp.use('/api', parseServer.app);
+    expressApp.use('/parse', parseServer.app);
     expressApp.use('/dashboard', dashboard);
 
     console.log(`Parse Server running at ${serverURL}`);

@@ -11,7 +11,7 @@ export const parseServerConfig = {
   javascriptKey: process.env.JAVASCRIPT_KEY || 'myJavascriptKey',
   restAPIKey: process.env.REST_API_KEY || 'myRestAPIKey',
   serverURL:
-    process.env.SERVER_URL || 'http://localhost:1337/api',
+    process.env.SERVER_URL || 'http://localhost:1337/parse',
   liveQuery: {
     classNames: ['Channel'],
   },
@@ -21,7 +21,7 @@ export const parseDashboardConfig = {
   apps: [
     {
       serverURL:
-        process.env.SERVER_URL || 'http://localhost:1337/api',
+        process.env.SERVER_URL || 'http://localhost:1337/parse',
       appId: process.env.APP_ID || 'myAppId',
       masterKey: process.env.MASTER_KEY || 'myMasterKey',
       appName: process.env.APP_NAME || 'GiveawayPremium',

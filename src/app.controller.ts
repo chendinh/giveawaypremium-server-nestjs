@@ -6,7 +6,7 @@ export class AppController {
   getRoot() {
     return {
       status: 'ok',
-      api: '/api',
+      api: '/parse',
       dashboard: '/dashboard',
       docs: {
         note: 'Parse Server API is mounted at /api',

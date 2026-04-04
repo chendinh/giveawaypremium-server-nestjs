@@ -33,7 +33,7 @@ Backend server for GiveawayPremium, built with NestJS and Parse Server.
    ```
 
 4. **Access the application**:
-   - **Parse Server API**: `http://localhost:1337/api`
+   - **Parse Server API**: `http://localhost:1337/parse`
    - **Parse Dashboard**: `http://localhost:1337/dashboard`
 
 ## Parse Dashboard Login
