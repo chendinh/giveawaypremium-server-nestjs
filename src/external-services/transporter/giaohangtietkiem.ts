@@ -1,17 +1,22 @@
 import logger from '../../plugins/logger';
-import { OrderReq, PriceEstimateReq, Transporter, TransporterOption, CreateOrderResult, OrderLabelOptions } from './interface';
+import {
+  OrderReq,
+  PriceEstimateReq,
+  Transporter,
+  TransporterOption,
+  CreateOrderResult,
+  OrderLabelOptions,
+} from './interface';
 import fetch, { Response } from 'node-fetch';
 import { URLSearchParams } from 'url';
 import { ghtkConfigs } from '../../config/ghtk.config';
 import { pickBy, identity } from 'lodash';
-import { generate } from "randomstring"; 
+import { generate } from 'randomstring';
 
 const { ghtkToken, ghtkUrl } = ghtkConfigs;
 
 export class GiaoHangTietKiem implements Transporter {
-  constructor(_options: TransporterOption) {
-		
-	}
+  constructor(_options: TransporterOption) {}
 
   private async hanldeFetchResponse(response: Response): Promise<any> {
     const status = response.status;
@@ -21,34 +26,39 @@ export class GiaoHangTietKiem implements Transporter {
     if (status !== 200 || !json.success) {
       logger.error(json);
       throw new Error(json.message);
-    } 
+    }
 
     return json;
   }
 
   private handleError(functionName: string, error: Error): never {
-    logger.error(`GiaoHangTietKiem ${functionName}. error: %s ${JSON.stringify(error)}`);
+    logger.error(
+      `GiaoHangTietKiem ${functionName}. error: %s ${JSON.stringify(error)}`
+    );
 
     throw error;
   }
 
   public async getPriceEstimate(req: PriceEstimateReq): Promise<number> {
     try {
-      const { from, to, weight, value, serviceLevel, transport } = req
+      const { from, to, weight, value, serviceLevel, transport } = req;
       const data = {
         pick_address: from.address,
-        pick_province: from.province,
-        pick_district: from.district,
-        province: to.province,
-        district: to.district,
+        pick_province: String(from.province),
+        pick_district: String(from.district),
+        province: String(to.province),
+        district: String(to.district),
         address: to.address,
         weight: weight.toString(),
         value: value.toString(),
         deliver_option: serviceLevel,
-        transport, 
+        transport,
       };
-      
-      const result = await fetch(`${ghtkUrl}/services/shipment/fee?${new URLSearchParams(data)}`, { method: 'GET', headers: { Token: ghtkToken} });
+
+      const result = await fetch(
+        `${ghtkUrl}/services/shipment/fee?${new URLSearchParams(data)}`,
+        { method: 'GET', headers: { Token: ghtkToken } }
+      );
       const json = await this.hanldeFetchResponse(result);
       const fee = json.fee?.fee as number;
 
@@ -60,12 +70,17 @@ export class GiaoHangTietKiem implements Transporter {
 
   public async createOrder(req: OrderReq): Promise<CreateOrderResult> {
     try {
-      const { from, to, value, serviceLevel, note, orderRequest } = req
-      const products = req.items.map((item) => pickBy({
-        name: item.name,
-        weight: item.weight,
-        quantity: item.quantity,
-      }, identity));
+      const { from, to, value, serviceLevel, note, orderRequest } = req;
+      const products = req.items.map(item =>
+        pickBy(
+          {
+            name: item.name,
+            weight: item.weight,
+            quantity: item.quantity,
+          },
+          identity
+        )
+      );
       let order = {
         id: generate(12),
         pick_name: from.name,
@@ -87,21 +102,21 @@ export class GiaoHangTietKiem implements Transporter {
         pick_money: 0,
         note: note,
         value: value,
-        transport: serviceLevel
+        transport: serviceLevel,
       };
       if (orderRequest) {
         order = {
           ...order,
-          ...orderRequest
-        }
+          ...orderRequest,
+        };
       }
       const body = { order: pickBy(order, identity), products };
       console.log(body);
-      const result = await fetch(`${ghtkUrl}/services/shipment/order`, { 
-        method: 'POST', 
+      const result = await fetch(`${ghtkUrl}/services/shipment/order`, {
+        method: 'POST',
         body: JSON.stringify(body),
-        headers: { Token: ghtkToken, 'Content-Type': 'application/json' } }
-      );
+        headers: { Token: ghtkToken, 'Content-Type': 'application/json' },
+      });
       const json = await this.hanldeFetchResponse(result);
       const labelId: string = json.order?.label ?? '';
       const res = await this.getOrder(labelId);
@@ -113,7 +128,10 @@ export class GiaoHangTietKiem implements Transporter {
 
   public async getOrder(id: string): Promise<unknown> {
     try {
-      const result = await fetch(`${ghtkUrl}/services/shipment/v2/${id}`, { method: 'GET', headers: { Token: ghtkToken} });
+      const result = await fetch(`${ghtkUrl}/services/shipment/v2/${id}`, {
+        method: 'GET',
+        headers: { Token: ghtkToken },
+      });
       const json = await this.hanldeFetchResponse(result);
 
       return json;
@@ -124,18 +142,27 @@ export class GiaoHangTietKiem implements Transporter {
 
   public async cancelOrder(id: string): Promise<unknown> {
     try {
-      await fetch(`${ghtkUrl}/services/shipment/cancel/${id}`, { method: 'POST', headers: { Token: ghtkToken} });
+      await fetch(`${ghtkUrl}/services/shipment/cancel/${id}`, {
+        method: 'POST',
+        headers: { Token: ghtkToken },
+      });
 
       return this.getOrder(id);
     } catch (error) {
       return this.handleError('cancelOrder', error as Error);
     }
   }
-  public async getOrderLabel(id: string, options?: OrderLabelOptions): Promise<string> {
+  public async getOrderLabel(
+    id: string,
+    options?: OrderLabelOptions
+  ): Promise<string> {
     try {
       const original = options?.original ?? 'portrait';
       const pageSize = options?.pageSize ?? 'A6';
-      const response = await fetch(`${ghtkUrl}/services/label/${id}?original=${original}&page_size=${pageSize}`, { method: 'GET', headers: { Token: ghtkToken} });
+      const response = await fetch(
+        `${ghtkUrl}/services/label/${id}?original=${original}&page_size=${pageSize}`,
+        { method: 'GET', headers: { Token: ghtkToken } }
+      );
       const status = response.status;
       if (status !== 200) {
         logger.error(response);

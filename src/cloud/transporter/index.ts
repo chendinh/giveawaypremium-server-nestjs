@@ -1,13 +1,17 @@
 import { getStatusByService } from '../../common/transporter.utils';
 import { Transporter } from '../../models/transporter';
 
-const afterCreate = async (request: Parse.Cloud.AfterSaveRequest<Transporter>) => {
+const afterCreate = async (
+  request: Parse.Cloud.AfterSaveRequest<Transporter>
+) => {
   const transporter = request.object;
   const order = transporter.get('order');
   order.save({ transporter: transporter.toPointer() }, { useMasterKey: true });
-}
+};
 
-const beforeCreate = async(request: Parse.Cloud.BeforeSaveRequest<Transporter>) => {
+const beforeCreate = async (
+  request: Parse.Cloud.BeforeSaveRequest<Transporter>
+) => {
   const tran = request.object;
   const res = tran.get('res');
   const service = tran.get('service') || 'giaohangtietkiem';
@@ -15,7 +19,10 @@ const beforeCreate = async(request: Parse.Cloud.BeforeSaveRequest<Transporter>) 
   let statusCode: number;
   switch (service) {
     case 'viettelpost':
-      statusCode = res?.data?.ORDER_STATUS ?? res?.status ?? 0;
+      // Khi mới tạo đơn VTP, response createOrder KHÔNG có ORDER_STATUS
+      // ORDER_STATUS chỉ đến từ webhook sau khi VTP xử lý
+      // → Status ban đầu luôn là WAITING_PICK_UP (102)
+      statusCode = res?.data?.ORDER_STATUS ?? 102;
       break;
     case 'giaohangtietkiem':
     default:
@@ -23,28 +30,29 @@ const beforeCreate = async(request: Parse.Cloud.BeforeSaveRequest<Transporter>) 
       break;
   }
   tran.set('status', getStatusByService(service, statusCode));
-}
+};
 
-const beforeSave = async(request: Parse.Cloud.BeforeSaveRequest<Transporter>) => {
+const beforeSave = async (
+  request: Parse.Cloud.BeforeSaveRequest<Transporter>
+) => {
   try {
     const product = request.object;
 
     if (product.isNew()) {
       beforeCreate(request);
-      request.context.isNew = true ;
+      request.context.isNew = true;
     }
   } catch (error) {
     throw error;
   }
 };
 
-const afterSave = async (request: Parse.Cloud.AfterSaveRequest<Transporter>) => {
+const afterSave = async (
+  request: Parse.Cloud.AfterSaveRequest<Transporter>
+) => {
   const context = request.context;
 
   if (context.isNew) afterCreate(request);
-}
-
-export {
-  beforeSave,
-  afterSave,
 };
+
+export { beforeSave, afterSave };

@@ -1,18 +1,14 @@
 import * as path from 'path';
 
 export const parseServerConfig = {
-  databaseURI:
-    process.env.DATABASE_URI ||
-    'mongodb+srv://giveawaypremium:1phoducchinh@cluster1.vsjnk.mongodb.net/myFirstDatabase?retryWrites=true&w=majority&appName=Cluster1',
+  databaseURI: process.env.DATABASE_URI,
   cloud: process.env.CLOUD || path.resolve(__dirname, '../cloud/main.js'),
-  appId: process.env.APP_ID || 'myAppId',
-  masterKey: process.env.MASTER_KEY || 'myMasterKey',
-  clientKey: process.env.CLIENT_KEY || 'myClientKey',
-  javascriptKey: process.env.JAVASCRIPT_KEY || 'myJavascriptKey',
-  restAPIKey: process.env.REST_API_KEY || 'myRestAPIKey',
-  serverURL:
-    process.env.SERVER_URL ||
-    'https://hammerhead-app-dcydg.ondigitalocean.app/api',
+  appId: process.env.APP_ID,
+  masterKey: process.env.MASTER_KEY,
+  clientKey: process.env.CLIENT_KEY,
+  javascriptKey: process.env.JAVASCRIPT_KEY,
+  restAPIKey: process.env.REST_API_KEY,
+  serverURL: process.env.SERVER_URL,
   liveQuery: {
     classNames: ['Channel'],
   },
@@ -21,18 +17,17 @@ export const parseServerConfig = {
 export const parseDashboardConfig = {
   apps: [
     {
-      serverURL:
-        process.env.SERVER_URL ||
-        'https://hammerhead-app-dcydg.ondigitalocean.app/api',
-      appId: process.env.APP_ID || 'myAppId',
-      masterKey: process.env.MASTER_KEY || 'myMasterKey',
+      serverURL: process.env.SERVER_URL,
+      appId: process.env.APP_ID,
+      masterKey: process.env.MASTER_KEY,
       appName: process.env.APP_NAME || 'GiveawayPremium',
     },
   ],
   users: [
     {
       user: process.env.PARSE_DASHBOARD_USERNAME || 'administrator',
-      pass: process.env.PARSE_DASHBOARD_PASSWORD || 'admin@giveawaypremium2021',
+      // Password phải được set trong .env — không có fallback hardcode
+      pass: process.env.PARSE_DASHBOARD_PASSWORD,
     },
   ],
   trustProxy: parseInt(process.env.PARSE_DASHBOARD_TRUST_PROXY || '1'),

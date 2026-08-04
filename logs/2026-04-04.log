@@ -1,0 +1,6 @@
+2026-04-04T20:52:14.765Z [APPLICATION] error: ViettelPost getPriceEstimate. error: invalid json response body at https://partner.viettelpost.vn/v2/order/getPriceAll reason: Unexpected end of JSON input
+2026-04-04T20:52:14.773Z [APPLICATION] error: ViettelPost getPriceEstimate. error: invalid json response body at https://partner.viettelpost.vn/v2/order/getPriceAll reason: Unexpected end of JSON input
+2026-04-04T20:57:27.592Z [APPLICATION] error: ViettelPost getPriceEstimate. error: invalid json response body at https://partner.viettelpost.vn/v2/order/getPriceAll reason: Unexpected end of JSON input
+2026-04-04T20:57:27.596Z [APPLICATION] error: ViettelPost getPriceEstimate. error: invalid json response body at https://partner.viettelpost.vn/v2/order/getPriceAll reason: Unexpected end of JSON input
+2026-04-04T20:59:10.093Z [APPLICATION] error: ViettelPost getPriceEstimate. error: invalid json response body at https://partner.viettelpost.vn/v2/order/getPriceAll reason: Unexpected end of JSON input
+2026-04-04T20:59:10.108Z [APPLICATION] error: ViettelPost getPriceEstimate. error: invalid json response body at https://partner.viettelpost.vn/v2/order/getPriceAll reason: Unexpected end of JSON input

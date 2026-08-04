@@ -2,15 +2,23 @@ import { Order } from '../../models/order';
 import { GiaoHangTietKiem } from './giaohangtietkiem';
 import { ViettelPost } from './viettelpost';
 import {
-  OrderReq, PriceEstimateReq, CreateOrderResult,
-  LoginReq, LoginResult, LongTokenResult, OrderLabelOptions,
+  OrderReq,
+  PriceEstimateReq,
+  CreateOrderResult,
+  LoginReq,
+  LoginResult,
+  LongTokenResult,
+  OrderLabelOptions,
   TransporterService,
 } from './interface';
 
 export * from './giaohangtietkiem';
 export * from './viettelpost';
 
-export const getPriceEstimate = async (service: string, req: PriceEstimateReq): Promise<number> => {
+export const getPriceEstimate = async (
+  service: string,
+  req: PriceEstimateReq
+): Promise<number> => {
   switch (service) {
     case TransporterService.GHTK: {
       const giaohangtietkiem = new GiaoHangTietKiem({});
@@ -23,9 +31,12 @@ export const getPriceEstimate = async (service: string, req: PriceEstimateReq): 
     default:
       throw new Error('Transporter Service not support');
   }
-}
+};
 
-export const createOrder = async (service: string, req: OrderReq): Promise<CreateOrderResult> => {
+export const createOrder = async (
+  service: string,
+  req: OrderReq
+): Promise<CreateOrderResult> => {
   switch (service) {
     case TransporterService.GHTK: {
       const giaohangtietkiem = new GiaoHangTietKiem({});
@@ -38,9 +49,12 @@ export const createOrder = async (service: string, req: OrderReq): Promise<Creat
     default:
       throw new Error('Transporter Service not support');
   }
-}
+};
 
-export const getOrder = async (service: string, id: string): Promise<unknown> => {
+export const getOrder = async (
+  service: string,
+  id: string
+): Promise<unknown> => {
   switch (service) {
     case TransporterService.GHTK: {
       const giaohangtietkiem = new GiaoHangTietKiem({});
@@ -53,9 +67,12 @@ export const getOrder = async (service: string, id: string): Promise<unknown> =>
     default:
       throw new Error('Transporter Service not support');
   }
-}
+};
 
-export const cancelOrder = async (service: string, id: string): Promise<unknown> => {
+export const cancelOrder = async (
+  service: string,
+  id: string
+): Promise<unknown> => {
   switch (service) {
     case TransporterService.GHTK: {
       const giaohangtietkiem = new GiaoHangTietKiem({});
@@ -68,30 +85,41 @@ export const cancelOrder = async (service: string, id: string): Promise<unknown>
     default:
       throw new Error('Transporter Service not support');
   }
-}
+};
 
-export const getOrderLabel = async (service: string, data: { orderId: string } & OrderLabelOptions): Promise<unknown> => {
+export const getOrderLabel = async (
+  service: string,
+  data: { orderId: string } & OrderLabelOptions
+): Promise<unknown> => {
   switch (service) {
     case TransporterService.GHTK: {
       const query = new Parse.Query(Order);
       const order = await query.include('transporter').get(data.orderId);
-      const label_id = order.get('transporter')?.get('res')?.order.label_id ?? '';
+      const label_id =
+        order.get('transporter')?.get('res')?.order.label_id ?? '';
       const giaohangtietkiem = new GiaoHangTietKiem({});
-      return giaohangtietkiem.getOrderLabel(label_id, { original: data.original, pageSize: data.pageSize });
+      return giaohangtietkiem.getOrderLabel(label_id, {
+        original: data.original,
+        pageSize: data.pageSize,
+      });
     }
     case TransporterService.ViettelPost: {
       const vtpQuery = new Parse.Query(Order);
       const vtpOrder = await vtpQuery.include('transporter').get(data.orderId);
-      const orderNumber = vtpOrder.get('transporter')?.get('res')?.data?.ORDER_NUMBER ?? '';
+      const orderNumber =
+        vtpOrder.get('transporter')?.get('res')?.data?.ORDER_NUMBER ?? '';
       const viettelpost = new ViettelPost({});
       return viettelpost.getOrderLabel(orderNumber);
     }
     default:
       throw new Error('Transporter Service not support');
   }
-}
+};
 
-export const loginTransporter = async (service: string, data?: LoginReq): Promise<LoginResult> => {
+export const loginTransporter = async (
+  service: string,
+  data?: LoginReq
+): Promise<LoginResult> => {
   switch (service) {
     case TransporterService.ViettelPost: {
       const viettelpost = new ViettelPost({});
@@ -100,9 +128,12 @@ export const loginTransporter = async (service: string, data?: LoginReq): Promis
     default:
       throw new Error('Login not supported for this transporter service');
   }
-}
+};
 
-export const getLongToken = async (service: string, data?: { token?: string }): Promise<LongTokenResult> => {
+export const getLongToken = async (
+  service: string,
+  data?: { token?: string }
+): Promise<LongTokenResult> => {
   switch (service) {
     case TransporterService.ViettelPost: {
       const viettelpost = new ViettelPost({});
@@ -111,4 +142,26 @@ export const getLongToken = async (service: string, data?: { token?: string }): 
     default:
       throw new Error('Long token not supported for this transporter service');
   }
-}
+};
+
+/**
+ * Lấy long token bằng secret key từ website viettelpost.vn
+ * Cách B (khuyến nghị): Không cần username/password
+ * secretKey lấy từ: https://viettelpost.vn/cau-hinh-tai-khoan → Thêm mới token
+ */
+export const loginBySecretKey = async (
+  service: string,
+  secretKey: string
+): Promise<LongTokenResult> => {
+  switch (service) {
+    case TransporterService.ViettelPost: {
+      const viettelpost = new ViettelPost({});
+      const result = await viettelpost.loginBySecretKey(secretKey);
+      return { token: result.token, expired: String(result.expired ?? '') };
+    }
+    default:
+      throw new Error(
+        'LoginBySecretKey not supported for this transporter service'
+      );
+  }
+};

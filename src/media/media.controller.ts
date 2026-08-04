@@ -20,12 +20,12 @@ export class MediaController {
   @UseInterceptors(
     FileInterceptor('media', {
       storage: diskStorage({ destination: './tmp/' }),
-    }),
+    })
   )
   async upload(
     @Req() req: Request & { file?: Express.Multer.File },
     @Res() res: Response,
-    @Next() next: NextFunction,
+    @Next() next: NextFunction
   ) {
     try {
       const headers = req.headers;
@@ -41,10 +41,19 @@ export class MediaController {
       const file = req.file;
       if (file) {
         const [, resourceFormat] = file.mimetype.split('/');
-        fs.renameSync(`${file.path}`, `${file.path}.${resourceFormat}`);
-        const response = await cloudinaryV2.uploader.upload(
-          `${file.path}.${resourceFormat}`,
-        );
+        const renamedPath = `${file.path}.${resourceFormat}`;
+        fs.renameSync(`${file.path}`, renamedPath);
+
+        let response: any;
+        try {
+          response = await cloudinaryV2.uploader.upload(renamedPath);
+        } finally {
+          // Luôn dọn temp file dù upload thành công hay thất bại
+          if (fs.existsSync(renamedPath)) {
+            fs.unlinkSync(renamedPath);
+          }
+        }
+
         const media = new Media();
         const result = await media.save(
           {
@@ -56,7 +65,7 @@ export class MediaController {
           {
             useMasterKey: true,
             sessionToken: headers['x-parse-session-token'] as string,
-          },
+          }
         );
 
         return res.json(result);

@@ -1,5 +1,5 @@
 export enum USER_ROLES {
-  ADMIM = 'administrator',
+  ADMIN = 'administrator',
   CUSTOMER = 'customer',
   OPERATOR = 'operator',
 }

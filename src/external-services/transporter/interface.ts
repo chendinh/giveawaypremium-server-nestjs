@@ -5,25 +5,57 @@ export enum TransporterService {
 }
 
 // ─── Address fragments ───
-export interface AddressBase {
-  province: string;
-  district: string;
-  address: string;
+
+/**
+ * Địa chỉ dùng với ViettelPost — dùng numeric ID
+ * Lấy từ API: GET /categories/listProvinceById, listDistrict, listWards
+ */
+export interface VTPAddress {
+  province: number; // PROVINCE_ID
+  district: number; // DISTRICT_ID
+  ward: number; // WARDS_ID  — bắt buộc với VTP
+  address: string; // địa chỉ chi tiết
+  name: string;
+  phone: string;
+  street?: string;
 }
 
-export interface FullAddress extends AddressBase {
+/**
+ * Địa chỉ dùng với GHTK — dùng tên tỉnh/huyện dạng string
+ */
+export interface GHTKAddress {
+  province: string; // tên tỉnh/TP, ví dụ: "Hà Nội"
+  district: string; // tên quận/huyện, ví dụ: "Quận Đống Đa"
+  ward: string; // tên phường/xã
+  address: string; // địa chỉ chi tiết
   name: string;
-  ward: string;
+  phone: string;
+  street?: string;
+}
+
+/**
+ * Union type — dùng khi code chung cho cả 2 provider
+ */
+export type AddressBase = VTPAddress | GHTKAddress;
+
+/** @deprecated Dùng VTPAddress hoặc GHTKAddress thay thế */
+export interface FullAddress {
+  province: string | number;
+  district: string | number;
+  ward: string | number;
+  address: string;
+  name: string;
   phone: string;
   street?: string;
 }
 
 // ─── Shared request types ───
+
 export interface PriceEstimateReq {
   weight: number;
   serviceLevel: string;
-  from: AddressBase;
-  to: AddressBase;
+  from: VTPAddress | GHTKAddress;
+  to: VTPAddress | GHTKAddress;
   value: number;
   transport: string;
 }
@@ -35,8 +67,8 @@ export interface OrderItem {
 }
 
 export interface OrderReq {
-  from: FullAddress;
-  to: FullAddress;
+  from: VTPAddress | GHTKAddress;
+  to: VTPAddress | GHTKAddress;
   orderRequest?: Record<string, unknown>;
   orderId: string;
   value: number;
