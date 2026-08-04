@@ -4,6 +4,10 @@ import { ParseServer } from 'parse-server';
 import ParseDashboard from 'parse-dashboard';
 import { ConfigService } from '@nestjs/config';
 
+// Singleton guard — tránh khởi tạo lại khi Vercel/serverless reinitialize module
+let parseServerInstance: ParseServer | null = null;
+let isInitialized = false;
+
 @Module({})
 export class ParseModule implements OnModuleInit {
   constructor(
@@ -12,6 +16,11 @@ export class ParseModule implements OnModuleInit {
   ) {}
 
   onModuleInit() {
+    if (isInitialized) {
+      return;
+    }
+    isInitialized = true;
+
     const app = this.httpAdapterHost.httpAdapter.getInstance();
 
     if (!process.env.SERVER_URL) {
@@ -27,9 +36,9 @@ export class ParseModule implements OnModuleInit {
       );
     }
 
-    const api = new ParseServer({
+    parseServerInstance = new ParseServer({
       databaseURI: this.configService.get('DATABASE_URI'),
-      cloud: this.configService.get('CLOUD') ||  './dist/cloud/main.js',
+      cloud: this.configService.get('CLOUD') || './dist/cloud/main.js',
       appId: this.configService.get('APP_ID'),
       masterKey: this.configService.get('MASTER_KEY'),
       clientKey: this.configService.get('CLIENT_KEY'),
@@ -41,7 +50,7 @@ export class ParseModule implements OnModuleInit {
       },
     });
 
-    api.start()
+    parseServerInstance.start();
 
     const dashboard = new ParseDashboard(
       {
@@ -76,9 +85,9 @@ export class ParseModule implements OnModuleInit {
       }
     );
 
-    app.use('/parse', api.app);
+    app.use('/parse', parseServerInstance.app);
     app.use('/dashboard', dashboard);
-    // Create LiveQuery server
+
     const httpServer = this.httpAdapterHost.httpAdapter.getHttpServer();
     ParseServer.createLiveQueryServer(httpServer);
   }
