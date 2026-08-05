@@ -155,3 +155,5 @@
 2026-08-04T21:00:32.330Z [APPLICATION] info: [VTP getPriceEstimate] Tuyến 43→32: chọn SCN (Chuyển phát nhanh) = 59999 VNĐ
 2026-08-04T21:37:18.182Z [APPLICATION] info: [VTP Token] Long token loaded from DB
 2026-08-04T21:37:18.183Z [APPLICATION] info: [VTP Token] Initialized from DB
+2026-08-04T21:53:48.062Z [APPLICATION] info: [VTP Token] Long token loaded from DB
+2026-08-04T21:53:48.063Z [APPLICATION] info: [VTP Token] Initialized from DB

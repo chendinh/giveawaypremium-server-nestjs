@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "nest build",
+    "vercel-build": "nest build",
     "format": "prettier --write \"src/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -66,6 +67,7 @@
     "@types/nodemailer": "6.4.1",
     "@types/parse": "3.0.2",
     "@types/randomstring": "1.1.8",
+    "@vercel/node": "^5.9.5",
     "jest": "^29.7.0",
     "prettier": "^3.3.3",
     "source-map-support": "^0.5.21",
