@@ -13,6 +13,7 @@ import * as OrderCloud from './order';
 import * as CampaignCloudValidate from './campaign/validate';
 import * as TransporterCloud from './transporter';
 import * as OrderRequestCloud from './order-request';
+import * as AppointmentCloud from './appointment';
 
 import { findAll } from './nhanh-category';
 import { activeCampaign } from './job/campaign';
@@ -173,7 +174,9 @@ Parse.Cloud.beforeDelete('Role', async request => {}, {
 Parse.Cloud.beforeDelete('Agency', async request => {}, {
   requireMaster: true,
 });
-Parse.Cloud.beforeDelete('AppointmentSchedule', async request => {}, {
+// AppointmentSchedule — validate slot trước khi insert
+Parse.Cloud.beforeSave('AppointmentSchedule', AppointmentCloud.beforeSave);
+Parse.Cloud.beforeDelete('AppointmentSchedule', async _request => {}, {
   requireMaster: true,
 });
 Parse.Cloud.beforeDelete('Category', async request => {}, {
