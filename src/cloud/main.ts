@@ -31,6 +31,7 @@ import {
   getVtpWards,
   lookupVtpAddressIds,
 } from './function/vtp-address';
+import { getOrderSummary } from './function/order-summary';
 
 const USER_CLOUD = {
   beforeCreate: async (
@@ -312,6 +313,25 @@ Parse.Cloud.define<
       required: true,
       options: val => val > 0,
       error: 'required count greater than 0',
+    },
+  },
+});
+
+// Cloud Function: getOrderSummary — aggregate theo khoảng ngày, requireUser
+Parse.Cloud.define('getOrderSummary', getOrderSummary, {
+  requireUser: true,
+  fields: {
+    fromDate: {
+      type: String,
+      required: true,
+      options: (val: string) => !isNaN(Date.parse(val)),
+      error: 'fromDate must be a valid ISO date string',
+    },
+    toDate: {
+      type: String,
+      required: true,
+      options: (val: string) => !isNaN(Date.parse(val)),
+      error: 'toDate must be a valid ISO date string',
     },
   },
 });
