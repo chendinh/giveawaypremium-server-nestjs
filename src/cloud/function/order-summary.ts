@@ -54,11 +54,11 @@ export const getOrderSummary = async (
 
   // Query tất cả orders trong khoảng thời gian, không include nested objects
   // Chỉ lấy các fields cần cho summary — không include client/transporter/productList
+  // findAll() không cho dùng limit/skip/sort nên KHÔNG set những thứ đó
   const query = new Parse.Query('Order');
   query.doesNotExist('deletedAt');
   query.greaterThanOrEqualTo('createdAt', from);
   query.lessThanOrEqualTo('createdAt', to);
-  // Chỉ select các fields cần thiết để giảm payload
   query.select([
     'totalMoneyForSale',
     'totalMoneyForSaleAfterFee',
@@ -67,8 +67,6 @@ export const getOrderSummary = async (
     'transferBankMoneyAmount',
     'transferOfflineMoneyAmount',
   ]);
-  query.limit(10000); // giới hạn hợp lý — nếu vượt quá thì báo lỗi rõ ràng
-  query.withCount(); // không cần count riêng
 
   const orders = await query.findAll({ useMasterKey: true });
 

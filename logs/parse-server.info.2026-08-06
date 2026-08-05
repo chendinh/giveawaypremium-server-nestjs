@@ -1,0 +1,7 @@
+{"level":"warn","message":"DeprecationWarning: The Parse Server option 'encodeParseObjectInCloudFunction' default will change to 'true' in a future version.","timestamp":"2026-08-05T17:09:50.173Z"}
+{"level":"warn","message":"DeprecationWarning: The Parse Server option 'enableInsecureAuthAdapters' default will change to 'false' in a future version.","timestamp":"2026-08-05T17:09:50.174Z"}
+{"level":"warn","message":"DeprecationWarning: insecure adapter is deprecated and will be removed in a future version.","timestamp":"2026-08-05T17:09:50.181Z"}
+{"level":"warn","message":"DeprecationWarning: insecure adapter is deprecated and will be removed in a future version.","timestamp":"2026-08-05T17:09:50.186Z"}
+{"level":"warn","message":"DeprecationWarning: insecure adapter is deprecated and will be removed in a future version.","timestamp":"2026-08-05T17:09:50.187Z"}
+{"level":"info","message":"Parse LiveQuery Server started running","timestamp":"2026-08-05T17:09:50.267Z"}
+{"level":"warn","message":"DeprecationWarning: insecure adapter is deprecated and will be removed in a future version.","timestamp":"2026-08-05T17:09:53.124Z"}
