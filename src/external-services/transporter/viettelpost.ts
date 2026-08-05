@@ -264,14 +264,27 @@ export class ViettelPost implements Transporter {
         throw new Error(`getPriceAll HTTP ${response.status}`);
       }
 
-      const json = await response.json();
+      let json: unknown;
+      try {
+        json = await response.json();
+      } catch {
+        throw new Error(
+          'Không có dịch vụ vận chuyển cho tuyến này (invalid response)'
+        );
+      }
 
       // getPriceAll trả về array trực tiếp, không có envelope {status, data}
       if (Array.isArray(json)) return json as ViettelPostServiceItem[];
 
       // Nếu có envelope thì lấy data
-      if (json?.data && Array.isArray(json.data))
-        return json.data as ViettelPostServiceItem[];
+      const jsonObj = json as Record<string, unknown>;
+      if (jsonObj?.data && Array.isArray(jsonObj.data))
+        return jsonObj.data as ViettelPostServiceItem[];
+
+      // Nếu API trả về lỗi có message
+      if (jsonObj?.message) {
+        throw new Error(String(jsonObj.message));
+      }
 
       return [];
     } catch (error) {
@@ -362,8 +375,14 @@ export class ViettelPost implements Transporter {
       let chosenService = services.find(s => priority.includes(s.MA_DV_CHINH));
       if (!chosenService && services.length > 0) chosenService = services[0];
 
-      const resolvedService =
-        chosenService?.MA_DV_CHINH || serviceLevel || 'VCN';
+      if (!chosenService) {
+        throw new Error(
+          `Không có dịch vụ VTP cho tuyến ${from.district}→${to.district}. ` +
+            'Kiểm tra lại địa chỉ người nhận (province/district/ward ID).'
+        );
+      }
+
+      const resolvedService = chosenService.MA_DV_CHINH;
       logger.info(
         `[VTP createOrder] Tuyến ${from.district}→${to.district}: service=${resolvedService} (${chosenService?.TEN_DICHVU || 'fallback'})`
       );
