@@ -109,7 +109,10 @@ export const getOrderLabel = async (
       const orderNumber =
         vtpOrder.get('transporter')?.get('res')?.data?.ORDER_NUMBER ?? '';
       const viettelpost = new ViettelPost({});
-      return viettelpost.getOrderLabel(orderNumber);
+      return viettelpost.getOrderLabel(orderNumber, {
+        original: data.original,
+        pageSize: data.pageSize,
+      });
     }
     default:
       throw new Error('Transporter Service not support');

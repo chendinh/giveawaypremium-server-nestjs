@@ -1,4 +1,4 @@
-import { Controller, Post, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
 import { Request, Response } from 'express';
 import logger from '../plugins/logger';
 import {
@@ -9,6 +9,44 @@ import { ViettelPostWebhookPayload } from '../external-services/transporter/viet
 
 @Controller('hooks')
 export class HooksController {
+  // ─── VTP label proxy ─────────────────────────────────────────────────────
+
+  /**
+   * GET /hooks/vtp-label?url=<encoded_vtp_url>
+   * Proxy nhãn VTP về client để embed bằng srcdoc (tránh CORS / X-Frame).
+   * Rewrite relative path → absolute để CSS/images load được.
+   */
+  @Get('vtp-label')
+  async vtpLabelProxy(@Query('url') url: string, @Res() res: Response) {
+    const VTP_PRINT_BASE = 'https://digitalize.viettelpost.vn/DigitalizePrint';
+
+    if (!url || !url.startsWith('https://digitalize.viettelpost.vn/')) {
+      return res.status(400).send('Invalid url');
+    }
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        return res.status(502).send('VTP returned ' + response.status);
+      }
+      let html = await response.text();
+
+      // Rewrite relative → absolute để assets load khi dùng srcdoc
+      html = html
+        .replace(/src="(\.\/|(?!http))/g, `src="${VTP_PRINT_BASE}/`)
+        .replace(/href="(\.\/|(?!http))/g, `href="${VTP_PRINT_BASE}/`);
+
+      // Thêm base tag để đảm bảo mọi relative URL đều resolve đúng
+      html = html.replace('<head>', `<head><base href="${VTP_PRINT_BASE}/">`);
+
+      res.setHeader('Content-Type', 'text/html; charset=UTF-8');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      return res.send(html);
+    } catch (err) {
+      return res.status(502).send('Proxy error');
+    }
+  }
+
   // ─── Nhanh.vn webhooks ──────────────────────────────────────────────────
 
   @Post('product')

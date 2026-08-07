@@ -188,6 +188,7 @@ export const tranporterAction = async (
     'CREATE_ORDER',
     'CANCEL_ORDER',
     'GET_ORDER_LABEL',
+    'GET_ORDER_STATUS',
   ];
 
   if (MASTER_ONLY_ACTIONS.includes(action) && !master) {
@@ -238,6 +239,54 @@ export const tranporterAction = async (
     case 'GET_ORDER_LABEL':
       return getOrderLabelAction(request);
       break;
+    case 'GET_ORDER_STATUS': {
+      // Lấy trạng thái đơn VTP theo orderId (Parse objectId của Order)
+      // Tự động cập nhật Transporter.status + vtpStatus trong DB
+      const { params: p } = request;
+      const { data: d, service: svc } = p;
+      const { orderId: oid } = d;
+      if (svc !== 'viettelpost') throw new Error('Only viettelpost supported');
+
+      const oQuery = new Parse.Query(Order);
+      const oObj = await oQuery.include('transporter').get(oid);
+      const tPtr = oObj.get('transporter');
+      if (!tPtr) throw new Error('Đơn này chưa có vận đơn');
+      const tObj = await tPtr.fetch({ useMasterKey: true });
+
+      const savedRes = tObj.get('res');
+      const orderNumber =
+        savedRes?.data?.ORDER_NUMBER || savedRes?.ORDER_NUMBER;
+      if (!orderNumber) throw new Error('Không tìm thấy mã vận đơn VTP');
+
+      const vtp = new (
+        await import('../../external-services/transporter/viettelpost')
+      ).ViettelPost({});
+      const detail = (await vtp.getOrderStatus(orderNumber)) as any;
+
+      if (detail?.data?.ORDER_STATUS != null) {
+        const { getStatusByService } =
+          await import('../../common/transporter.utils');
+        const VIETTELPOST_STATUS = (
+          await import('../../constants/order-status')
+        ).VIETTELPOST_STATUS;
+        const vtpCode: number = detail.data.ORDER_STATUS;
+        const normalizedStatus =
+          VIETTELPOST_STATUS[String(vtpCode)] || tObj.get('status');
+
+        await tObj.save(
+          {
+            status: normalizedStatus,
+            vtpStatus: vtpCode,
+            vtpStatusName: detail.data.ORDER_STATUSDATE
+              ? `${vtpCode}`
+              : String(vtpCode),
+          },
+          { useMasterKey: true }
+        );
+      }
+
+      return detail;
+    }
     case 'CANCEL_ORDER':
       const tran = await cancelOrderAction(request);
 

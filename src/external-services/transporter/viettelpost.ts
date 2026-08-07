@@ -485,6 +485,43 @@ export class ViettelPost implements Transporter {
     }
   }
 
+  /**
+   * Lấy chi tiết + trạng thái đơn hàng theo ORDER_NUMBER
+   * GET /v3/order/detail-v2?o={ORDER_NUMBER}
+   *
+   * API này trả về toàn bộ thông tin đơn gồm ORDER_STATUS hiện tại.
+   * Dùng để refresh thủ công khi webhook chưa đến (môi trường dev).
+   */
+  public async getOrderStatus(orderNumber: string): Promise<unknown> {
+    try {
+      const response = await fetch(
+        `${viettelpostUrl}/order/detail-v2?o=${encodeURIComponent(orderNumber)}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Token: this.getToken(),
+          },
+        }
+      );
+
+      const json = (await response.json()) as ViettelPostApiResponse<unknown>;
+
+      if (json.status !== 200) {
+        logger.error('[ViettelPost] getOrderStatus failed:', json);
+        throw new Error(json.message || 'Không lấy được trạng thái đơn');
+      }
+
+      logger.info(
+        `[VTP getOrderStatus] ${orderNumber}: status=${(json.data as any)?.ORDER_STATUS}`
+      );
+
+      return json;
+    } catch (error) {
+      return this.handleError('getOrderStatus', error as Error);
+    }
+  }
+
   // ─── Lấy thông tin đơn ───────────────────────────────────────────────────
 
   /**

@@ -282,6 +282,7 @@ Parse.Cloud.define('transporter', tranporterAction, {
           'GET_SERVICES',
           'CREATE_ORDER',
           'GET_ORDER_LABEL',
+          'GET_ORDER_STATUS',
           'CANCEL_ORDER',
           'LOGIN',
           'GET_LONG_TOKEN',
