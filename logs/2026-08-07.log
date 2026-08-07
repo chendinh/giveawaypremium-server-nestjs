@@ -1,0 +1,36 @@
+2026-08-07T10:00:01.312Z [APPLICATION] info: [VTP Token] Long token loaded from DB
+2026-08-07T10:00:01.313Z [APPLICATION] info: [VTP Token] Initialized from DB
+2026-08-07T10:06:37.212Z [APPLICATION] info: [VTP getPriceEstimate] Tuyến 43→33: chọn VHT (Hỏa tốc thỏa thuận) = 39111 VNĐ
+2026-08-07T10:06:43.029Z [APPLICATION] info: [VTP getPriceEstimate] Tuyến 43→33: chọn VHT (Hỏa tốc thỏa thuận) = 39111 VNĐ
+2026-08-07T10:06:43.089Z [APPLICATION] info: [VTP getPriceEstimate] Tuyến 43→33: chọn VHT (Hỏa tốc thỏa thuận) = 39111 VNĐ
+2026-08-07T10:12:36.883Z [APPLICATION] info: [VTP Token] Long token loaded from DB
+2026-08-07T10:12:36.884Z [APPLICATION] info: [VTP Token] Initialized from DB
+2026-08-07T10:16:24.450Z [APPLICATION] info: [VTP Token] Long token loaded from DB
+2026-08-07T10:16:24.452Z [APPLICATION] info: [VTP Token] Initialized from DB
+2026-08-07T10:17:10.014Z [APPLICATION] info: [VTP getPriceEstimate] Tuyến 43→34: chọn VHT (Hỏa tốc thỏa thuận) = 39111 VNĐ
+2026-08-07T10:17:11.901Z [APPLICATION] info: [VTP getPriceEstimate] Tuyến 43→34: chọn VHT (Hỏa tốc thỏa thuận) = 39111 VNĐ
+2026-08-07T10:17:12.047Z [APPLICATION] info: [VTP getPriceEstimate] Tuyến 43→34: chọn VHT (Hỏa tốc thỏa thuận) = 39111 VNĐ
+2026-08-07T10:20:03.192Z [APPLICATION] info: [VTP createOrder] Tuyến 43→34: service=VHT (Hỏa tốc thỏa thuận)
+2026-08-07T10:20:03.315Z [APPLICATION] error: [ViettelPost] API error response: Price does not apply to this itinerary!
+2026-08-07T10:20:03.315Z [APPLICATION] error: [ViettelPost] createOrder error:
+2026-08-07T10:23:19.895Z [APPLICATION] info: [VTP Token] Long token loaded from DB
+2026-08-07T10:23:19.896Z [APPLICATION] info: [VTP Token] Initialized from DB
+2026-08-07T10:33:51.454Z [APPLICATION] info: [VTP Token] Long token loaded from DB
+2026-08-07T10:33:51.455Z [APPLICATION] info: [VTP Token] Initialized from DB
+2026-08-07T10:35:24.068Z [APPLICATION] info: [VTP createOrder] Available services: VHT, SHT, VTK, VCN, BCN
+2026-08-07T10:35:24.069Z [APPLICATION] info: [VTP createOrder] Tuyến 43→34: service=VHT (Hỏa tốc thỏa thuận)
+2026-08-07T10:35:24.070Z [APPLICATION] warn: [VTP createOrder] ORDER_PAYMENT=2 nhưng codMoney=0 → tự động chuyển sang ORDER_PAYMENT=4 (chỉ thu cước)
+2026-08-07T10:35:24.268Z [APPLICATION] error: [ViettelPost] API error response: Price does not apply to this itinerary!
+2026-08-07T10:35:24.269Z [APPLICATION] error: [ViettelPost] createOrder error:
+2026-08-07T10:36:19.893Z [APPLICATION] info: [VTP getPriceEstimate] Tuyến 43→33: chọn VHT (Hỏa tốc thỏa thuận) = 39111 VNĐ
+2026-08-07T10:36:36.124Z [APPLICATION] info: [VTP getPriceEstimate] Tuyến 43→33: chọn VHT (Hỏa tốc thỏa thuận) = 39111 VNĐ
+2026-08-07T10:36:36.132Z [APPLICATION] info: [VTP getPriceEstimate] Tuyến 43→33: chọn VHT (Hỏa tốc thỏa thuận) = 39111 VNĐ
+2026-08-07T10:37:11.883Z [APPLICATION] info: [VTP createOrder] Available services: VHT, SHT, VTK, VCN, BCN
+2026-08-07T10:37:11.883Z [APPLICATION] info: [VTP createOrder] Tuyến 43→33: service=VHT (Hỏa tốc thỏa thuận)
+2026-08-07T10:37:12.006Z [APPLICATION] error: [ViettelPost] API error response: Price does not apply to this itinerary!
+2026-08-07T10:37:12.007Z [APPLICATION] error: [ViettelPost] createOrder error:
+2026-08-07T10:53:33.538Z [APPLICATION] info: [VTP Token] Long token loaded from DB
+2026-08-07T10:53:33.539Z [APPLICATION] info: [VTP Token] Initialized from DB
+2026-08-07T10:55:17.811Z [APPLICATION] info: [VTP getPriceEstimate] Tuyến 43→33: chọn VHT (Hỏa tốc thỏa thuận) = 39111 VNĐ
+2026-08-07T10:55:45.797Z [APPLICATION] info: [VTP createOrder] Available services: VHT, SHT, VTK, VCN, BCN
+2026-08-07T10:55:45.798Z [APPLICATION] info: [VTP createOrder] Tuyến 43→33: service=VHT (Hỏa tốc thỏa thuận)

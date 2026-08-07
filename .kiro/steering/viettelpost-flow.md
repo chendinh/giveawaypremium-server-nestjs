@@ -198,7 +198,7 @@ Lấy đầy đủ từ API `getPriceAll` — danh sách thay đổi theo địa
 | `3`     | Thu hộ tiền hàng, KHÔNG thu cước | **Mặc định** — shop trả cước, khách trả tiền hàng |
 | `4`     | Thu hộ cước, không thu tiền hàng | Ít dùng                                           |
 
-**GiveAwayPremium dùng `ORDER_PAYMENT = 3`** (hardcode trong viettelpost.ts).
+**GiveAwayPremium dùng `ORDER_PAYMENT = 4`** (tiền hàng đã CK trước, khách trả cước khi nhận).
 
 ---
 

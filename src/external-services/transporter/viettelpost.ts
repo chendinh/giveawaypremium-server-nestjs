@@ -370,8 +370,17 @@ export class ViettelPost implements Transporter {
         TYPE: 1,
       });
 
+      // Bỏ qua serviceLevel không hợp lệ (SHT, HT, ht, v.v.) — chỉ dùng mã VTP chuẩn
+      const VALID_VTP_SERVICES = new Set(services.map(s => s.MA_DV_CHINH));
+      const resolvedServiceLevel =
+        serviceLevel && VALID_VTP_SERVICES.has(serviceLevel.toUpperCase())
+          ? serviceLevel.toUpperCase()
+          : undefined;
+
       const preferred = ['VCN', 'LCOD', 'VHT', 'NCOD', 'SCOD'];
-      const priority = serviceLevel ? [serviceLevel, ...preferred] : preferred;
+      const priority = resolvedServiceLevel
+        ? [resolvedServiceLevel, ...preferred]
+        : preferred;
       let chosenService = services.find(s => priority.includes(s.MA_DV_CHINH));
       if (!chosenService && services.length > 0) chosenService = services[0];
 
@@ -381,6 +390,10 @@ export class ViettelPost implements Transporter {
             'Kiểm tra lại địa chỉ người nhận (province/district/ward ID).'
         );
       }
+
+      logger.info(
+        `[VTP createOrder] Available services: ${services.map(s => s.MA_DV_CHINH).join(', ')}`
+      );
 
       const resolvedService = chosenService.MA_DV_CHINH;
       logger.info(
@@ -406,10 +419,10 @@ export class ViettelPost implements Transporter {
         PRODUCT_WEIGHT: productWeight,
         PRODUCT_TYPE: 'HH',
         /**
-         * ORDER_PAYMENT = 3: Thu hộ tiền hàng, KHÔNG thu hộ tiền cước
-         * Phù hợp với model ký gửi của GiveAwayPremium
+         * ORDER_PAYMENT = 4: Thu hộ tiền cước, không thu hộ tiền hàng
+         * Phù hợp với model GiveAwayPremium: tiền hàng đã CK trước, khách trả cước khi nhận
          */
-        ORDER_PAYMENT: 3,
+        ORDER_PAYMENT: 4,
         ORDER_SERVICE: resolvedService,
         ORDER_NOTE: note || '',
         MONEY_COLLECTION: req.codMoney ?? 0,
@@ -428,9 +441,25 @@ export class ViettelPost implements Transporter {
         ),
       };
 
-      // Cho phép override bất kỳ field nào từ caller
+      // Cho phép override bất kỳ field nào từ caller,
+      // nhưng KHÔNG cho phép override ORDER_SERVICE (đã được chọn tự động)
+      // và loại ORDER_TYPE (không hợp lệ với VTP createOrder — gây lỗi "Price does not apply")
+      // và normalize ORDER_PAYMENT: nếu caller muốn thu hộ cả 2 (2) nhưng codMoney=0 → dùng 4
       if (orderRequest) {
-        order = { ...order, ...orderRequest };
+        const {
+          ORDER_SERVICE: _ignoredSvc,
+          ORDER_TYPE: _ignoredType,
+          ...safeOverride
+        } = orderRequest as any;
+        // Nếu ORDER_PAYMENT=2 (thu hộ tiền hàng + cước) nhưng không có tiền COD → đổi sang 4
+        // vì tiền hàng đã được CK trước, chỉ cần thu cước khi giao
+        if (safeOverride.ORDER_PAYMENT === 2 && (req.codMoney ?? 0) === 0) {
+          logger.warn(
+            '[VTP createOrder] ORDER_PAYMENT=2 nhưng codMoney=0 → tự động chuyển sang ORDER_PAYMENT=4 (chỉ thu cước)'
+          );
+          safeOverride.ORDER_PAYMENT = 4;
+        }
+        order = { ...order, ...safeOverride };
       }
 
       const body = pickBy(

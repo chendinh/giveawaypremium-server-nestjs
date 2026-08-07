@@ -33,6 +33,7 @@ import {
   lookupVtpAddressIds,
 } from './function/vtp-address';
 import { getOrderSummary } from './function/order-summary';
+import { updateUserByAdmin } from './function/user';
 
 const USER_CLOUD = {
   beforeCreate: async (
@@ -335,6 +336,23 @@ Parse.Cloud.define('getOrderSummary', getOrderSummary, {
       required: true,
       options: (val: string) => !isNaN(Date.parse(val)),
       error: 'toDate must be a valid ISO date string',
+    },
+  },
+});
+
+// Cloud Function: updateUserByAdmin — admin cập nhật thông tin user bằng master key
+Parse.Cloud.define('updateUserByAdmin', updateUserByAdmin, {
+  requireUser: true,
+  fields: {
+    userId: {
+      type: String,
+      required: true,
+      options: (val: string) => !!val,
+      error: 'userId là bắt buộc',
+    },
+    data: {
+      type: Object,
+      required: true,
     },
   },
 });
