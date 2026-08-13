@@ -8,8 +8,41 @@ import { getOrder, cancelOrder } from '../../external-services/transporter';
 import { Order } from '../../models/order';
 import { OrderRequest } from '../../models/order.request';
 import { Product } from '../../models/product';
+import { StockLog, StockLogReason } from '../../models/stock.log';
 import { Transporter } from '../../models/transporter';
 import { updateOrderRequestQueue } from '../order-request';
+
+/**
+ * Ghi StockLog cho một product.
+ * Fire-and-forget — không block luồng chính.
+ */
+const writeStockLog = (
+  productId: string,
+  orderId: string,
+  delta: number,
+  reason: StockLogReason,
+  snapshot: {
+    remainBefore: number;
+    remainAfter: number;
+    soldBefore: number;
+    soldAfter: number;
+  }
+) => {
+  const log = new StockLog();
+  const productPointer = new Product();
+  productPointer.id = productId;
+  log
+    .save(
+      { product: productPointer, orderId, delta, reason, snapshot },
+      { useMasterKey: true }
+    )
+    .catch(err =>
+      console.error(
+        `[StockLog] Failed to write log for product ${productId}:`,
+        err?.message
+      )
+    );
+};
 
 const updateStatusTransporter = async (order: Order) => {
   const transporterPointer = order.get('transporter') as Transporter;
@@ -100,9 +133,26 @@ const afterCreate = async (request: Parse.Cloud.AfterSaveRequest) => {
             return null;
           }
 
+          const remainBefore = prod.get('remainNumberProduct') ?? 0;
+          const soldBefore = prod.get('soldNumberProduct') ?? 0;
+
           prod.increment('soldNumberProduct', product.count);
           prod.decrement('remainNumberProduct', product.count);
-          return prod.save(undefined, { useMasterKey: true });
+          await prod.save(undefined, { useMasterKey: true });
+
+          writeStockLog(
+            product.objectId,
+            order.id,
+            -product.count,
+            StockLogReason.ORDER_CREATED,
+            {
+              remainBefore,
+              remainAfter: remainBefore - product.count,
+              soldBefore,
+              soldAfter: soldBefore + product.count,
+            }
+          );
+          return;
         } catch (err) {
           // Product không tìm thấy — log nhưng không crash
           console.error(
@@ -127,12 +177,38 @@ const afterDelete = async (request: Parse.Cloud.AfterSaveRequest<Order>) => {
   const productList = order.get('productList') || [];
   const promise = productList
     .filter((product: any) => product?.objectId)
-    .map((product: any) => {
+    .map(async (product: any) => {
       const productPointer = new Product();
       productPointer.id = product.objectId;
-      productPointer.decrement('soldNumberProduct', product.count);
-      productPointer.increment('remainNumberProduct', product.count);
-      return productPointer.save(undefined, { useMasterKey: true });
+
+      // Fetch để lấy snapshot trước khi hoàn stock
+      try {
+        const prod = await productPointer.fetch({ useMasterKey: true });
+        const remainBefore = prod.get('remainNumberProduct') ?? 0;
+        const soldBefore = prod.get('soldNumberProduct') ?? 0;
+
+        prod.decrement('soldNumberProduct', product.count);
+        prod.increment('remainNumberProduct', product.count);
+        await prod.save(undefined, { useMasterKey: true });
+
+        writeStockLog(
+          product.objectId,
+          order.id,
+          +product.count,
+          StockLogReason.ORDER_DELETED,
+          {
+            remainBefore,
+            remainAfter: remainBefore + product.count,
+            soldBefore,
+            soldAfter: soldBefore - product.count,
+          }
+        );
+      } catch (err) {
+        console.error(
+          `[Order afterDelete] Product ${product.objectId} error:`,
+          err?.message
+        );
+      }
     });
   await Promise.all(promise);
   cancelOrderTransporter(order).catch(console.error);

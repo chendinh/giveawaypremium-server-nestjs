@@ -3,12 +3,28 @@ import { Media } from '../../models/media';
 import { Product, ProductStatusEnums } from '../../models/product';
 import sum = require('lodash/sum');
 
+const STOCK_DIRTY_FIELDS = [
+  'soldNumberProduct',
+  'remainNumberProduct',
+  'count',
+  'price',
+  'priceAfterFee',
+  'deletedAt',
+];
+
 const syncConsignment = async (
   request: Parse.Cloud.AfterSaveRequest<Product>
 ) => {
-  const consignmentPointer = request.object.get('consignment');
+  const product = request.object;
+  const consignmentPointer = product.get('consignment');
   // Guard: Product không có consignment thì skip
   if (!consignmentPointer) return;
+
+  // #8 Performance: chỉ sync khi các field liên quan đến số liệu thay đổi
+  // Tránh sync khi save media, note, hay field không ảnh hưởng aggregate
+  const isNew = request.context?.isNew;
+  const hasDirtyStockField = STOCK_DIRTY_FIELDS.some(f => product.dirty(f));
+  if (!isNew && !hasDirtyStockField) return;
 
   const query = new Parse.Query(Consignment);
   const consignmentId = consignmentPointer.id;

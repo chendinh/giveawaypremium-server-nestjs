@@ -222,11 +222,12 @@ export const VTP_NATIONAL_TYPE_INTERNATIONAL = 0;
 /** Bảng giá trong nước */
 export const VTP_NATIONAL_TYPE_DOMESTIC = 1;
 
-// ─── OrderRequest status ─────────────────────────────────────────────────────
+// ─── ORDER_REQUEST status ─────────────────────────────────────────────────────
 
 export enum OrderRequestStatus {
   VALID = 'VALID',
   IN_QUEUE = 'IN_QUEUE',
   CANCELLED = 'CANCELLED',
   IN_ORDER = 'IN_ORDER',
+  COMPLETED = 'COMPLETED', // Order đã giao thành công — terminal state
 }

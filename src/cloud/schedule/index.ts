@@ -1,7 +1,7 @@
 import * as schedule from 'node-schedule';
 import { scheduleSettings } from '../../config/schedule.config';
-import { activeCampaign } from './job/campaign';
-import { expireCampaign } from './job/campaign/expire';
+import { activeCampaign } from '../job/campaign';
+import { expireCampaign } from '../job/campaign/expire';
 
 export const jobScheduleActiveCampaign = schedule.scheduleJob(
   scheduleSettings.ACTIVE_CAMPAIN,

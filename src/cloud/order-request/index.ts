@@ -26,6 +26,30 @@ const cancelOldOrderRequest = async () => {
   }
 };
 
+/**
+ * Dọn dẹp OrderRequest terminal (IN_ORDER / CANCELLED / COMPLETED) cũ hơn 7 ngày.
+ * Gọi từ beforeFind để không cần cron job riêng.
+ * Tránh tích lũy records vô thời hạn trong DB.
+ */
+const cleanupOldTerminalOrderRequests = async () => {
+  const cutoff = moment().subtract(7, 'days').toDate();
+  const query = new Parse.Query(OrderRequest);
+  query.containedIn('status', [
+    OrderRequestStatus.IN_ORDER,
+    OrderRequestStatus.CANCELLED,
+    OrderRequestStatus.COMPLETED,
+  ]);
+  query.lessThan('createdAt', cutoff);
+
+  const stale = await query.findAll({ useMasterKey: true });
+  if (!stale.length) return;
+
+  await Parse.Object.destroyAll(stale, { useMasterKey: true });
+  console.log(
+    `[OrderRequest] Cleaned up ${stale.length} stale terminal records`
+  );
+};
+
 const updateOrderRequestQueue = async (
   orderRequest: OrderRequest,
   status?: OrderRequestStatus
@@ -84,6 +108,8 @@ const beforeFind = async (
   const user = request.user;
   if (user) {
     await cancelOldOrderRequest().catch(console.error);
+    // Dọn dẹp records terminal cũ — chạy nền, không block query
+    cleanupOldTerminalOrderRequests().catch(console.error);
   }
 };
 
@@ -93,4 +119,5 @@ export {
   afterSave,
   beforeFind,
   cancelOldOrderRequest,
+  cleanupOldTerminalOrderRequests,
 };

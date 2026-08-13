@@ -6,6 +6,7 @@ import {
   isVtpFinalStatus,
 } from '../common/transporter.utils';
 import { ViettelPostWebhookPayload } from '../external-services/transporter/viettelpost.types';
+import { OrderRequestStatus } from '../constants/order-status';
 
 @Controller('hooks')
 export class HooksController {
@@ -44,6 +45,34 @@ export class HooksController {
       return res.send(html);
     } catch (err) {
       return res.status(502).send('Proxy error');
+    }
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────
+
+  /**
+   * Khi VTP xác nhận giao thành công (status 501):
+   * Tìm Order liên quan → tìm OrderRequest của Order đó → chuyển sang COMPLETED.
+   */
+  private async completeOrderRequest(transporter: Parse.Object): Promise<void> {
+    const orderPointer = transporter.get('order');
+    if (!orderPointer) return;
+
+    const orderQuery = new Parse.Query('Order');
+    const order = await orderQuery
+      .include('orderRequest')
+      .get(orderPointer.id, { useMasterKey: true });
+
+    const orderRequest = order.get('orderRequest');
+    if (!orderRequest) return;
+
+    const fetched = await orderRequest.fetch({ useMasterKey: true });
+    if (fetched.get('status') === OrderRequestStatus.IN_ORDER) {
+      await fetched.save(
+        { status: OrderRequestStatus.COMPLETED },
+        { useMasterKey: true }
+      );
+      logger.info(`[VTP Webhook] OrderRequest ${fetched.id} → COMPLETED`);
     }
   }
 
@@ -162,6 +191,16 @@ export class HooksController {
         },
         { useMasterKey: true }
       );
+
+      // Khi đơn giao thành công (VTP 501) → chuyển OrderRequest sang COMPLETED
+      if (ORDER_STATUS === 501) {
+        this.completeOrderRequest(transporter).catch(err =>
+          logger.error(
+            `[VTP Webhook] completeOrderRequest failed for ${ORDER_NUMBER}:`,
+            err
+          )
+        );
+      }
 
       logger.info(
         `[VTP Webhook] Updated ${ORDER_NUMBER}: ${normalizedStatus} (${ORDER_STATUS})`
