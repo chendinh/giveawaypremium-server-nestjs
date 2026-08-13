@@ -55,13 +55,23 @@ const cancelOrderTransporter = async (order: Order) => {
     const response = await cancelOrder(service, id);
     const statusCode = getStatusFromResponse(service, response);
 
-    if (statusCode) {
+    // VTP cancelOrder thành công trả về data=null, statusCode = 0
+    // Cần check thêm response.status === 200 hoặc message thành công
+    const isCancelled =
+      statusCode > 0 ||
+      (response as any)?.status === 200 ||
+      (response as any)?.message?.toLowerCase().includes('thành công');
+
+    if (isCancelled) {
       order.unset('transporter');
       order.save({}, { useMasterKey: true });
       transporter.unset('order');
       transporter.save(
         {
-          status: getStatusByService(service, statusCode),
+          status:
+            statusCode > 0
+              ? getStatusByService(service, statusCode)
+              : 'CANCELLED',
           res: response,
         },
         { useMasterKey: true }
@@ -81,6 +91,15 @@ const afterCreate = async (request: Parse.Cloud.AfterSaveRequest) => {
           const productPointer = new Product();
           productPointer.id = product.objectId;
           const prod = await productPointer.fetch({ useMasterKey: true });
+
+          // Không decrement stock cho product đã soft-delete
+          if (prod.get('deletedAt')) {
+            console.warn(
+              `[Order afterCreate] Product ${product.objectId} is soft-deleted, skipping stock update`
+            );
+            return null;
+          }
+
           prod.increment('soldNumberProduct', product.count);
           prod.decrement('remainNumberProduct', product.count);
           return prod.save(undefined, { useMasterKey: true });

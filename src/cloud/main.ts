@@ -17,6 +17,7 @@ import * as AppointmentCloud from './appointment';
 
 import { findAll } from './nhanh-category';
 import { activeCampaign } from './job/campaign';
+import { expireCampaign } from './job/campaign/expire';
 import { getAdministativeUnits } from './function/administrative-units';
 import { tranporterAction } from './function/transporter';
 import { TransporterService } from '../external-services/transporter/interface';
@@ -234,6 +235,7 @@ Parse.Cloud.beforeFind('OrderRequest', OrderRequestCloud.beforeFind);
 
 // Define Job
 Parse.Cloud.job('ActiveCampaign', activeCampaign);
+Parse.Cloud.job('ExpireCampaign', expireCampaign);
 
 // Define Function
 Parse.Cloud.define('administativeUnits', getAdministativeUnits);

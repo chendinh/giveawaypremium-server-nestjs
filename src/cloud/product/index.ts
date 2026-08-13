@@ -26,6 +26,7 @@ const syncConsignment = async (
   const prodQuery = new Parse.Query(Product);
   const products = await prodQuery
     .equalTo('consignment', consignmentPointer)
+    .doesNotExist('deletedAt')
     .find();
   const productList = products.map(product => {
     const productJson = product.toJSON();
@@ -86,7 +87,7 @@ const syncConsignment = async (
     return moneyBackSold * soldNumberProduct;
   });
   const moneyBack = sum(moneyBackProduct);
-  consignment.save(
+  await consignment.save(
     {
       productList,
       numSoldConsignment,

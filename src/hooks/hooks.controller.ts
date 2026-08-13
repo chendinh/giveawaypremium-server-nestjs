@@ -125,7 +125,7 @@ export class HooksController {
       transporterQuery.equalTo('service', 'viettelpost');
       const allVtpTransporters = await transporterQuery
         .descending('createdAt')
-        .find({ useMasterKey: true });
+        .findAll({ useMasterKey: true });
 
       const transporter = allVtpTransporters.find(
         t => t.get('res')?.data?.ORDER_NUMBER === ORDER_NUMBER

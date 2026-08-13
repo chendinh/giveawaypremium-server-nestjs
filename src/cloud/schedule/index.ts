@@ -1,30 +1,29 @@
-import axios from 'axios';
 import * as schedule from 'node-schedule';
-import { parseServerConfig } from '../../config/parse.config';
 import { scheduleSettings } from '../../config/schedule.config';
+import { activeCampaign } from './job/campaign';
+import { expireCampaign } from './job/campaign/expire';
 
 export const jobScheduleActiveCampaign = schedule.scheduleJob(
   scheduleSettings.ACTIVE_CAMPAIN,
   function () {
-    axios
-      .post(
-        `${parseServerConfig.serverURL}/jobs/ActiveCampaign`,
-        {},
-        {
-          headers: {
-            'X-Parse-Application-Id': parseServerConfig.appId,
-            'X-Parse-Master-Key': parseServerConfig.masterKey,
-          },
-        },
-      )
-      .then(httpResponse =>
-        console.log(
-          `[Request] [Jobs] ActiveCampaign success: ${JSON.stringify(httpResponse.data)}`
-        )
-      )
+    activeCampaign({})
+      .then(() => console.log('[Jobs] ActiveCampaign success'))
       .catch(error =>
         console.error(
-          `[Request] [Jobs] ActiveCampaign failed ${error.response?.status ?? ''} ${error.message}`
+          `[Jobs] ActiveCampaign failed: ${error?.message || error}`
+        )
+      );
+  }
+);
+
+export const jobScheduleExpireCampaign = schedule.scheduleJob(
+  scheduleSettings.EXPIRE_CAMPAIN,
+  function () {
+    expireCampaign({})
+      .then(() => console.log('[Jobs] ExpireCampaign success'))
+      .catch(error =>
+        console.error(
+          `[Jobs] ExpireCampaign failed: ${error?.message || error}`
         )
       );
   }
