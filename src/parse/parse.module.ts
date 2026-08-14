@@ -56,7 +56,9 @@ export class ParseModule implements OnModuleInit {
       {
         apps: [
           {
-            serverURL: this.configService.get('SERVER_URL'),
+            serverURL:
+              this.configService.get('DASHBOARD_SERVER_URL') ||
+              `http://localhost:${this.configService.get('PORT') || 1337}/parse`,
             appId: this.configService.get('APP_ID'),
             masterKey: this.configService.get('MASTER_KEY'),
             appName: this.configService.get('APP_NAME'),
