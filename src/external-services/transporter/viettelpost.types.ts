@@ -185,6 +185,12 @@ export interface ViettelPostCreateOrderReq {
    * 4 = Thu hộ tiền cước, không thu hộ tiền hàng
    */
   ORDER_PAYMENT: 1 | 2 | 3 | 4;
+  /**
+   * Loại gửi hàng:
+   * 1 = Gửi hàng thường (shipper đến lấy tại kho)
+   * 2 = Hoàn hàng
+   */
+  ORDER_TYPE?: 1 | 2;
   ORDER_SERVICE: string; // lấy từ MA_DV_CHINH của getPriceAll
   ORDER_SERVICE_ADD?: string; // mã dịch vụ cộng thêm, cách nhau bởi dấu phẩy
   ORDER_NOTE?: string; // tối đa 150 bytes

@@ -54,6 +54,7 @@ const {
   viettelpostUrl,
   viettelpostUsername,
   viettelpostPassword,
+  viettelpostGroupAddressId,
 } = viettelpostConfigs;
 
 // Module-level cache — được set một lần khi server khởi động
@@ -400,6 +401,24 @@ export class ViettelPost implements Transporter {
         `[VTP createOrder] Tuyến ${from.district}→${to.district}: service=${resolvedService} (${chosenService?.TEN_DICHVU || 'fallback'})`
       );
 
+      /**
+       * Ghi chú vận đơn cố định theo yêu cầu nghiệp vụ GiveAwayPremium.
+       * Caller có thể truyền note riêng — sẽ được prepend vào trước.
+       * Giới hạn VTP: 150 bytes (UTF-8). Tiếng Việt ~3 bytes/ký tự → ~50 ký tự.
+       */
+      const FIXED_NOTE =
+        'De vo, nhe tay; Gio hanh chinh; Goi truoc khi giao; GIAO T2';
+      const rawNote = note ? `${note}; ${FIXED_NOTE}` : FIXED_NOTE;
+      // Cắt theo bytes UTF-8 bằng Buffer (có sẵn trong Node.js)
+      let combinedNote = rawNote;
+      if (Buffer.byteLength(rawNote, 'utf8') > 150) {
+        let cut = rawNote;
+        while (Buffer.byteLength(cut, 'utf8') > 150 && cut.length > 0) {
+          cut = cut.slice(0, cut.length - 1);
+        }
+        combinedNote = cut;
+      }
+
       let order: ViettelPostCreateOrderReq = {
         SENDER_FULLNAME: from.name,
         SENDER_ADDRESS: from.address,
@@ -424,8 +443,19 @@ export class ViettelPost implements Transporter {
          */
         ORDER_PAYMENT: 4,
         ORDER_SERVICE: resolvedService,
-        ORDER_NOTE: note || '',
+        ORDER_NOTE: combinedNote,
         MONEY_COLLECTION: req.codMoney ?? 0,
+        /**
+         * ORDER_TYPE = 1: Gửi hàng thường (shipper đến lấy tại kho/địa chỉ đã đăng ký).
+         * Kết hợp với GROUPADDRESS_ID → VTP biết đây là pickup, không phải gửi bưu cục.
+         */
+        ORDER_TYPE: 1,
+        /**
+         * GROUPADDRESS_ID: ID kho/địa chỉ lấy hàng đã đăng ký trên portal VTP (Pickup point Q1).
+         * Bắt buộc để VTP biết điểm lấy hàng → shipper đến tận nơi lấy.
+         * Không có field này → VTP hiểu là shop mang đến bưu cục gửi.
+         */
+        GROUPADDRESS_ID: viettelpostGroupAddressId,
         CHECK_UNIQUE: true,
         ENABLE_SORT_CODE: true,
         LIST_ITEM: items.map(item =>
@@ -443,12 +473,12 @@ export class ViettelPost implements Transporter {
 
       // Cho phép override bất kỳ field nào từ caller,
       // nhưng KHÔNG cho phép override ORDER_SERVICE (đã được chọn tự động)
-      // và loại ORDER_TYPE (không hợp lệ với VTP createOrder — gây lỗi "Price does not apply")
       // và normalize ORDER_PAYMENT: nếu caller muốn thu hộ cả 2 (2) nhưng codMoney=0 → dùng 4
       if (orderRequest) {
         const {
           ORDER_SERVICE: _ignoredSvc,
-          ORDER_TYPE: _ignoredType,
+          // Bảo vệ: không cho phép caller override ghi chú nghiệp vụ cố định
+          ORDER_NOTE: _ignoredNote,
           ...safeOverride
         } = orderRequest as any;
         // Nếu ORDER_PAYMENT=2 (thu hộ tiền hàng + cước) nhưng không có tiền COD → đổi sang 4
