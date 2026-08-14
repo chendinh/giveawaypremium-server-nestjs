@@ -22,8 +22,28 @@ const syncConsignment = async (
 
   // #8 Performance: chỉ sync khi các field liên quan đến số liệu thay đổi
   // Tránh sync khi save media, note, hay field không ảnh hưởng aggregate
+  //
+  // QUAN TRỌNG: Parse SDK reset dirty() về false SAU KHI save() thành công.
+  // Khi Order.afterSave gọi prod.save() → Product.afterSave được trigger,
+  // lúc này product.dirty('soldNumberProduct') luôn = false dù vừa increment.
+  // Fix: dùng _previousData để so sánh giá trị trước/sau thay vì dirty().
   const isNew = request.context?.isNew;
-  const hasDirtyStockField = STOCK_DIRTY_FIELDS.some(f => product.dirty(f));
+  const original = request.original; // object snapshot TRƯỚC khi save (Parse cung cấp)
+
+  let hasDirtyStockField: boolean;
+  if (original) {
+    // afterSave luôn có request.original khi là update
+    hasDirtyStockField = STOCK_DIRTY_FIELDS.some(f => {
+      const before = original.get(f);
+      const after = product.get(f);
+      // So sánh bằng JSON để handle Date, null, undefined
+      return JSON.stringify(before) !== JSON.stringify(after);
+    });
+  } else {
+    // Fallback nếu original không có (trường hợp lạ) — sync luôn cho an toàn
+    hasDirtyStockField = true;
+  }
+
   if (!isNew && !hasDirtyStockField) return;
 
   const query = new Parse.Query(Consignment);

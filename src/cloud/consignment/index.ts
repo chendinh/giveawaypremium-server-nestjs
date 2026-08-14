@@ -24,6 +24,7 @@ const afterCreate = async (
       code: rawProduct.code,
       priceAfterFee: rawProduct.priceAfterFee,
       remainNumberProduct: rawProduct.count,
+      soldNumberProduct: 0, // explicit init — tránh null khi sync consignment
       moneyBackProduct: rawProduct.moneyBackProduct,
       consignment: consignment,
       consignee: consignment.get('consignee'),
