@@ -1,10 +1,89 @@
 import moment from 'moment';
+import * as ejs from 'ejs';
 import { MailFactory } from '../../external-services/email';
 import { MAIL_TYPE } from '../../external-services/email/constants';
 import { mailConfigs } from '../../config/email.config';
+import { EMAIL_PATHS, EMAIL_TYPES } from '../../constants/email';
 import { Consignment } from '../../models/consignment';
 import { ConsignmentGroup } from '../../models/consignment.group';
 import { Email } from '../../models/email';
+
+export interface ProductEmailItem {
+  name: string;
+  amount: number;
+  status: string;
+  price: number;
+  priceAfterFee: number;
+}
+
+export interface ConsignmentEmailData {
+  customerName: string;
+  phoneNumber: string;
+  identityId: string;
+  consignmentId: string;
+  numberOfProduct: number;
+  bankName: string;
+  bankId: string;
+  timeGetMoney: string;
+  timeCheck: string;
+  products: ProductEmailItem[];
+}
+
+interface RawProduct {
+  key: string;
+  name: string;
+  price: number;
+  count: number;
+  priceAfterFee: number;
+  rateNew: string;
+  note?: string;
+  code?: string;
+  categoryId: string;
+  subCategoryId?: string;
+  moneyBackProduct?: number;
+}
+
+export function buildEmailData(consignment: Consignment): ConsignmentEmailData {
+  const consigner = consignment.getConsigner();
+
+  const customerName = (consigner?.get('name') as string) ?? '';
+  const phoneNumber = (consigner?.get('phone') as string) ?? '';
+  const identityId = (consigner?.get('identityId') as string) ?? '';
+  const consignmentId = consignment.id;
+  const bankName = (consignment.get('bankName') as string) ?? '';
+  const bankId = (consignment.get('bankId') as string) ?? '';
+  const timeGetMoney = (consignment.get('timeGetMoney') as string) ?? '';
+
+  const timeCheck = timeGetMoney
+    ? moment(timeGetMoney, 'DD-MM-YYYY')
+        .subtract(3, 'days')
+        .format('DD-MM-YYYY')
+    : '';
+
+  const productList: RawProduct[] = consignment.get('productList') ?? [];
+  const numberOfProduct = productList.length;
+
+  const products: ProductEmailItem[] = productList.map(rawProduct => ({
+    name: rawProduct.name,
+    amount: rawProduct.count,
+    status: rawProduct.rateNew ?? '',
+    price: rawProduct.price,
+    priceAfterFee: rawProduct.priceAfterFee,
+  }));
+
+  return {
+    customerName,
+    phoneNumber,
+    identityId,
+    consignmentId,
+    numberOfProduct,
+    bankName,
+    bankId,
+    timeGetMoney,
+    timeCheck,
+    products,
+  };
+}
 
 const emailFactory = MailFactory.getMail(MAIL_TYPE.SENDINBLUE, mailConfigs);
 
@@ -88,6 +167,40 @@ const remiderConsignment = async (consignment: Consignment): Promise<void> => {
   }
 };
 
+export const sendConfirmationEmail = async (
+  consignment: Consignment
+): Promise<void> => {
+  try {
+    const consigner = consignment.getConsigner();
+    const email = consigner.get('mail') as string;
+
+    if (!email) {
+      console.warn(
+        `[sendConfirmationEmail] consigner ${consigner.id} không có email — bỏ qua`
+      );
+      return;
+    }
+
+    const data = buildEmailData(consignment);
+    const html = await ejs.renderFile(
+      EMAIL_PATHS[EMAIL_TYPES.CONSIGNMENT],
+      data
+    );
+
+    await emailFactory.send({
+      mailTo: email,
+      title: `Give Away Premium - Biên nhận ký gửi ${consignment.id}`,
+      html,
+    });
+  } catch (error) {
+    console.error(
+      `[sendConfirmationEmail] Lỗi gửi email cho consignment ${consignment?.id}:`,
+      error
+    );
+    // Không re-throw — fire-and-forget
+  }
+};
+
 export const reminderConsignmentGroup = async (
   request: Parse.Cloud.FunctionRequest<{ groupId: string }>
 ): Promise<any> => {
@@ -129,5 +242,26 @@ export const remiderIndividualConsignment = async (
 
   remiderConsignment(consignment);
 
+  return { success: true };
+};
+
+export const sendConsignmentEmail = async (
+  request: Parse.Cloud.FunctionRequest<{ consignmentId: string }>
+): Promise<{ success: boolean }> => {
+  const { consignmentId } = request.params;
+  const query = new Parse.Query(Consignment);
+  const consignment = await query
+    .equalTo('objectId', consignmentId)
+    .include('consigner')
+    .first({ useMasterKey: true });
+
+  if (!consignment) {
+    throw new Parse.Error(
+      Parse.Error.OBJECT_NOT_FOUND,
+      `Consignment ${consignmentId} không tồn tại`
+    );
+  }
+
+  await sendConfirmationEmail(consignment);
   return { success: true };
 };

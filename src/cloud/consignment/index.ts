@@ -2,6 +2,7 @@ import { Category } from '../../models/category';
 import { Consignment } from '../../models/consignment';
 import { Product } from '../../models/product';
 import { SubCategory } from '../../models/sub.category';
+import { sendConfirmationEmail } from '../function/mail';
 
 const afterCreate = async (
   request: Parse.Cloud.AfterSaveRequest<Consignment>
@@ -40,6 +41,9 @@ const afterCreate = async (
   });
 
   await Promise.all(promises);
+
+  // Gửi email xác nhận ký gửi — fire-and-forget
+  sendConfirmationEmail(consignment);
 };
 
 const afterDelete = async (
