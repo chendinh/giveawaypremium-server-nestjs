@@ -29,6 +29,18 @@ export interface ConsignmentEmailData {
   products: ProductEmailItem[];
 }
 
+export interface PaymentEmailData {
+  customerName: string;
+  phoneNumber: string;
+  identityId: string;
+  consignmentId: string;
+  numberOfProduct: number;
+  bankName: string;
+  bankId: string;
+  moneyBack: string; // đã format: "1,000,000 vnd"
+  note: string; // "---" nếu rỗng
+}
+
 interface RawProduct {
   key: string;
   name: string;
@@ -274,5 +286,85 @@ export const sendConsignmentEmail = async (
   }
 
   await sendConfirmationEmail(consignment);
+  return { success: true };
+};
+
+export const sendPaymentConfirmationEmail = async (
+  request: Parse.Cloud.FunctionRequest<{ consignmentId: string }>
+): Promise<{ success: boolean }> => {
+  const { consignmentId } = request.params;
+
+  // 1. Query Consignment + consigner
+  const query = new Parse.Query(Consignment);
+  const consignment = await query
+    .equalTo('objectId', consignmentId)
+    .include('consigner')
+    .first({ useMasterKey: true });
+
+  if (!consignment) {
+    throw new Parse.Error(
+      Parse.Error.OBJECT_NOT_FOUND,
+      `Consignment ${consignmentId} không tồn tại`
+    );
+  }
+
+  // 2. Lấy email (fire-and-forget nếu không có email)
+  const consigner = consignment.getConsigner();
+  if (!consigner) {
+    console.error(
+      `[sendPaymentConfirmationEmail] consignment ${consignmentId} không có consigner`
+    );
+    return { success: true };
+  }
+
+  const email =
+    (consigner.get('email') as string) || (consigner.get('mail') as string);
+  if (!email) {
+    console.error(
+      `[sendPaymentConfirmationEmail] consigner ${consigner.id} không có email`
+    );
+    return { success: true };
+  }
+
+  // 3. Build data
+  const productList: any[] = consignment.get('productList') ?? [];
+  const rawMoneyBack = (consignment.get('moneyBack') as number) ?? 0;
+  const rawNote = (consignment.get('note') as string) ?? '';
+
+  const data: PaymentEmailData = {
+    customerName: (consigner.get('name') as string) ?? '',
+    phoneNumber: (consigner.get('phone') as string) ?? '',
+    identityId: (consigner.get('identityId') as string) ?? '',
+    consignmentId: consignment.id,
+    numberOfProduct: productList.length,
+    bankName: (consignment.get('bankName') as string) ?? '',
+    bankId: (consignment.get('bankId') as string) ?? '',
+    moneyBack:
+      rawMoneyBack > 0
+        ? `${rawMoneyBack.toLocaleString('vi-VN')} vnd`
+        : '0 vnd',
+    note: rawNote || '---',
+  };
+
+  console.log(
+    `[sendPaymentConfirmationEmail] consignment ${consignmentId} → data:`,
+    JSON.stringify(data, null, 2)
+  );
+
+  // 4. Render + send (fire-and-forget trên exception email)
+  try {
+    const html = await ejs.renderFile(EMAIL_PATHS[EMAIL_TYPES.PAYMENT], data);
+    await emailFactory.send({
+      mailTo: email,
+      title: 'Xác nhận chuyển khoản',
+      html,
+    });
+  } catch (error) {
+    console.error(
+      `[sendPaymentConfirmationEmail] Lỗi gửi email consignment ${consignmentId}:`,
+      error
+    );
+  }
+
   return { success: true };
 };

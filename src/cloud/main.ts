@@ -26,6 +26,7 @@ import {
   remiderIndividualConsignment,
   reminderConsignmentGroup,
   sendConsignmentEmail,
+  sendPaymentConfirmationEmail,
 } from './function/mail';
 import { initViettelPostToken } from '../external-services/transporter/viettelpost.token.service';
 import {
@@ -115,6 +116,22 @@ Parse.Cloud.define<(param: { groupId: string }) => { groupId: string }>(
 Parse.Cloud.define<(param: { consignmentId: string }) => { success: boolean }>(
   'sendConsignmentEmail',
   sendConsignmentEmail,
+  {
+    requireUser: true,
+    fields: {
+      consignmentId: {
+        required: true,
+        type: String,
+        options: (val: string) => !!val,
+        error: 'consignmentId là bắt buộc và không được rỗng',
+      },
+    },
+  }
+);
+
+Parse.Cloud.define<(param: { consignmentId: string }) => { success: boolean }>(
+  'sendPaymentConfirmationEmail',
+  sendPaymentConfirmationEmail,
   {
     requireUser: true,
     fields: {
