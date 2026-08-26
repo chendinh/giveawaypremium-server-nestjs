@@ -290,68 +290,257 @@ export const sendConsignmentEmail = async (
 };
 
 export const sendPaymentConfirmationEmail = async (
-  request: Parse.Cloud.FunctionRequest<{ consignmentId: string }>
+  request: Parse.Cloud.FunctionRequest<{
+    consignmentId: string;
+    customerName?: string;
+    phoneNumber?: string;
+    identityId?: string;
+    bankName?: string;
+    bankId?: string;
+    moneyBack?: number;
+    note?: string;
+  }>
 ): Promise<{ success: boolean }> => {
-  const { consignmentId } = request.params;
+  const {
+    consignmentId,
+    customerName,
+    phoneNumber,
+    identityId,
+    bankName,
+    bankId,
+    moneyBack,
+    note,
+  } = request.params;
 
-  // 1. Query Consignment + consigner
-  const query = new Parse.Query(Consignment);
-  const consignment = await query
-    .equalTo('objectId', consignmentId)
-    .include('consigner')
-    .first({ useMasterKey: true });
+  // FE đã gửi đầy đủ data — chỉ cần dùng giá trị đó
+  // Nếu FE không gửi (lỗi fallback), query lại từ DB
+  // Kiểm tra bất kỳ field nào bị thiếu rỗng để trigger fallback
+  const isDataIncomplete =
+    !customerName ||
+    !phoneNumber ||
+    !bankName ||
+    !bankId ||
+    moneyBack === undefined ||
+    moneyBack === 0;
 
-  if (!consignment) {
-    throw new Parse.Error(
-      Parse.Error.OBJECT_NOT_FOUND,
-      `Consignment ${consignmentId} không tồn tại`
+  if (isDataIncomplete) {
+    console.log(
+      `[sendPaymentConfirmationEmail] FE không gửi đủ data (${isDataIncomplete}), query lại từ DB...`
     );
-  }
+    const query = new Parse.Query(Consignment);
+    const consignment = await query
+      .equalTo('objectId', consignmentId)
+      .include('consigner')
+      .first({ useMasterKey: true });
 
-  // 2. Lấy email (fire-and-forget nếu không có email)
-  const consigner = consignment.getConsigner();
-  if (!consigner) {
-    console.error(
-      `[sendPaymentConfirmationEmail] consignment ${consignmentId} không có consigner`
-    );
+    if (consignment) {
+      const consigner = consignment.getConsigner();
+      if (consigner) {
+        try {
+          await consigner.fetch({ useMasterKey: true });
+          const productList = consignment.get('productList') ?? [];
+          const dbMoneyBack = (consignment.get('moneyBack') as number) ?? 0;
+          const dbBankName = (consignment.get('bankName') as string) ?? '';
+          const dbBankId = (consignment.get('bankId') as string) ?? '';
+
+          await sendPaymentEmail(
+            consigner,
+            consignmentId,
+            productList.length,
+            dbMoneyBack,
+            dbBankName,
+            dbBankId,
+            customerName ?? '',
+            phoneNumber ?? '',
+            identityId ?? '',
+            note ?? ''
+          );
+        } catch (err) {
+          console.error(`[sendPaymentConfirmationEmail] fetch User lỗi:`, err);
+        }
+      }
+    } else {
+      console.error(
+        `[sendPaymentConfirmationEmail] Consignment ${consignmentId} không tồn tại`
+      );
+    }
     return { success: true };
   }
+
+  // Dùng data từ FE, nhưng query từ DB nếu thiếu bankName/bankId/moneyBack
+  let finalData: PaymentEmailData;
+  let finalConsigner: Parse.User;
+
+  // Kiểm tra nếu cần data từ DB (bankName, bankId, moneyBack có thể rỗng từ FE)
+  const needsDBData =
+    !bankName || !bankId || moneyBack === undefined || moneyBack === 0;
+
+  if (needsDBData) {
+    console.log(
+      `[sendPaymentConfirmationEmail] bankName/bankId/moneyBack thiếu từ FE, query từ DB...`
+    );
+    const query = new Parse.Query(Consignment);
+    const consignment = await query
+      .equalTo('objectId', consignmentId)
+      .include('consigner')
+      .first({ useMasterKey: true });
+
+    if (!consignment) {
+      console.error(`[sendPaymentConfirmationEmail] Consignment không tồn tại`);
+      return { success: true };
+    }
+
+    const consigner = consignment.getConsigner();
+    if (!consigner) {
+      console.error(
+        `[sendPaymentConfirmationEmail] consignment ${consignmentId} không có consigner`
+      );
+      return { success: true };
+    }
+
+    try {
+      await consigner.fetch({ useMasterKey: true });
+    } catch (err) {
+      console.error(`[sendPaymentConfirmationEmail] fetch User lỗi:`, err);
+      return { success: true };
+    }
+
+    const dbMoneyBack = (consignment.get('moneyBack') as number) ?? 0;
+    const dbBankName = (consignment.get('bankName') as string) ?? '';
+    const dbBankId = (consignment.get('bankId') as string) ?? '';
+    const productList = consignment.get('productList') ?? [];
+
+    finalData = {
+      customerName: customerName ?? '',
+      phoneNumber: phoneNumber ?? '',
+      identityId: identityId ?? '',
+      consignmentId,
+      numberOfProduct: productList.length,
+      bankName: dbBankName,
+      bankId: dbBankId,
+      moneyBack:
+        dbMoneyBack > 0
+          ? `${dbMoneyBack.toLocaleString('vi-VN')} vnd`
+          : '0 vnd',
+      note: note ?? '---',
+    };
+
+    finalConsigner = consigner;
+  } else {
+    // Dùng data từ FE
+    finalData = {
+      customerName: customerName ?? '',
+      phoneNumber: phoneNumber ?? '',
+      identityId: identityId ?? '',
+      consignmentId,
+      numberOfProduct: 1, // fallback
+      bankName: bankName ?? '',
+      bankId: bankId ?? '',
+      moneyBack:
+        (moneyBack ?? 0) > 0
+          ? `${(moneyBack ?? 0).toLocaleString('vi-VN')} vnd`
+          : '0 vnd',
+      note: note ?? '---',
+    };
+
+    // Query consigner để lấy email
+    const query = new Parse.Query(Consignment);
+    const consignment = await query
+      .equalTo('objectId', consignmentId)
+      .include('consigner')
+      .first({ useMasterKey: true });
+
+    if (!consignment) {
+      console.error(`[sendPaymentConfirmationEmail] Consignment không tồn tại`);
+      return { success: true };
+    }
+
+    finalConsigner = consignment.getConsigner();
+    if (!finalConsigner) {
+      console.error(
+        `[sendPaymentConfirmationEmail] consignment ${consignmentId} không có consigner`
+      );
+      return { success: true };
+    }
+
+    try {
+      await finalConsigner.fetch({ useMasterKey: true });
+    } catch (err) {
+      console.error(`[sendPaymentConfirmationEmail] fetch User lỗi:`, err);
+      return { success: true };
+    }
+  }
+
+  console.log(
+    `[sendPaymentConfirmationEmail] consignment ${consignmentId} → finalData:`,
+    JSON.stringify(finalData, null, 2)
+  );
 
   const email =
-    (consigner.get('email') as string) || (consigner.get('mail') as string);
+    (finalConsigner.get('email') as string) ||
+    (finalConsigner.get('mail') as string);
   if (!email) {
     console.error(
-      `[sendPaymentConfirmationEmail] consigner ${consigner.id} không có email`
+      `[sendPaymentConfirmationEmail] consigner ${finalConsigner.id} không có email`
     );
     return { success: true };
   }
 
-  // 3. Build data
-  const productList: any[] = consignment.get('productList') ?? [];
-  const rawMoneyBack = (consignment.get('moneyBack') as number) ?? 0;
-  const rawNote = (consignment.get('note') as string) ?? '';
+  await sendPaymentEmail(
+    finalConsigner,
+    consignmentId,
+    finalData.numberOfProduct,
+    (finalData.moneyBack as string).replace(/\D/g, '') as unknown as number,
+    finalData.bankName,
+    finalData.bankId,
+    finalData.customerName,
+    finalData.phoneNumber,
+    finalData.identityId,
+    finalData.note
+  );
+  return { success: true };
+};
+
+// Helper để send email với data đã được chuẩn bị
+const sendPaymentEmail = async (
+  consigner: Parse.User,
+  consignmentId: string,
+  numberOfProduct: number,
+  moneyBack: number,
+  bankName: string,
+  bankId: string,
+  customerName: string,
+  phoneNumber: string,
+  identityId: string,
+  note: string
+): Promise<void> => {
+  const rawMoneyBack = moneyBack;
 
   const data: PaymentEmailData = {
-    customerName: (consigner.get('name') as string) ?? '',
-    phoneNumber: (consigner.get('phone') as string) ?? '',
-    identityId: (consigner.get('identityId') as string) ?? '',
-    consignmentId: consignment.id,
-    numberOfProduct: productList.length,
-    bankName: (consignment.get('bankName') as string) ?? '',
-    bankId: (consignment.get('bankId') as string) ?? '',
+    customerName,
+    phoneNumber,
+    identityId,
+    consignmentId,
+    numberOfProduct,
+    bankName,
+    bankId,
     moneyBack:
       rawMoneyBack > 0
         ? `${rawMoneyBack.toLocaleString('vi-VN')} vnd`
         : '0 vnd',
-    note: rawNote || '---',
+    note: note || '---',
   };
 
-  console.log(
-    `[sendPaymentConfirmationEmail] consignment ${consignmentId} → data:`,
-    JSON.stringify(data, null, 2)
-  );
+  const email =
+    (consigner.get('email') as string) || (consigner.get('mail') as string);
 
-  // 4. Render + send (fire-and-forget trên exception email)
+  if (!email) {
+    console.error(
+      `[sendPaymentEmail] consigner ${consigner.id} không có email`
+    );
+    return;
+  }
+
   try {
     const html = await ejs.renderFile(EMAIL_PATHS[EMAIL_TYPES.PAYMENT], data);
     await emailFactory.send({
@@ -361,10 +550,8 @@ export const sendPaymentConfirmationEmail = async (
     });
   } catch (error) {
     console.error(
-      `[sendPaymentConfirmationEmail] Lỗi gửi email consignment ${consignmentId}:`,
+      `[sendPaymentEmail] Lỗi gửi email consignment ${consignmentId}:`,
       error
     );
   }
-
-  return { success: true };
 };

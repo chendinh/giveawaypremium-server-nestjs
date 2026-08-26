@@ -78,6 +78,19 @@ const beforeSave = async (request: Parse.Cloud.BeforeSaveRequest) => {
 
     if (consignment.isNew()) {
       request.context.isNew = true;
+      // Copy identityId từ consigner vào Consignment để dùng cho email
+      const consigner = consignment.get('consigner');
+      if (consigner && consigner.id) {
+        try {
+          await consigner.fetch({ useMasterKey: true });
+          const identityId = consigner.get('identityId') as string;
+          if (identityId) {
+            consignment.set('consignerIdCard', identityId);
+          }
+        } catch (err) {
+          console.error(`[Consignment beforeSave] fetch consigner error:`, err);
+        }
+      }
     }
     if (consignment.dirty('deletedAt') && consignment.get('deletedAt')) {
       request.context.isDeleted = true;
