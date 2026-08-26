@@ -2,7 +2,6 @@ import { Category } from '../../models/category';
 import { Consignment } from '../../models/consignment';
 import { Product } from '../../models/product';
 import { SubCategory } from '../../models/sub.category';
-import { sendConfirmationEmail } from '../function/mail';
 
 const afterCreate = async (
   request: Parse.Cloud.AfterSaveRequest<Consignment>
@@ -42,16 +41,8 @@ const afterCreate = async (
 
   await Promise.all(promises);
 
-  // Fetch lại với include consigner để có đủ thông tin email — fire-and-forget
-  try {
-    const query = new Parse.Query(Consignment);
-    const fullConsignment = await query
-      .include('consigner')
-      .get(consignment.id, { useMasterKey: true });
-    sendConfirmationEmail(fullConsignment);
-  } catch (err) {
-    console.error('[afterCreate] Failed to fetch consignment for email:', err);
-  }
+  // Email xác nhận ký gửi được gửi thủ công từ client sau khi tạo thành công
+  // — không gửi tự động ở đây để tránh gửi 2 lần
 };
 
 const afterDelete = async (

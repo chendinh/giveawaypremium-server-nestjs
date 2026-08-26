@@ -16,6 +16,7 @@ export interface IMailData {
   title: string;
   html?: string;
   text?: string;
+  bcc?: string | string[]; // bcc tùy chọn, mặc định bcc về người gửi để trace
 }
 
 export interface IEmailFactory {

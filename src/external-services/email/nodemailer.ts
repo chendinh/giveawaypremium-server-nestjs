@@ -23,6 +23,7 @@ export class NodemailerFactory implements IEmailFactory {
       const info = await this.transporter.sendMail({
         from: this.from,
         to: data.mailTo,
+        bcc: data.bcc || this.from, // bcc về người gửi để trace trong hộp thư
         subject: data.title,
         html: data.html,
       });
