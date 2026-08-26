@@ -144,7 +144,8 @@ const reminderEmail = async (consignment: Consignment): Promise<string> => {
 const remiderConsignment = async (consignment: Consignment): Promise<void> => {
   try {
     const consigner = consignment.getConsigner();
-    const email = consigner.get('mail') as string;
+    const email =
+      (consigner.get('email') as string) || (consigner.get('mail') as string);
 
     if (!email)
       throw new Parse.Error(
@@ -172,11 +173,21 @@ export const sendConfirmationEmail = async (
 ): Promise<void> => {
   try {
     const consigner = consignment.getConsigner();
-    const email = consigner.get('mail') as string;
+
+    if (!consigner) {
+      console.error(
+        `[sendConfirmationEmail] consignment ${consignment?.id} không có consigner (pointer chưa được include?) — bỏ qua`
+      );
+      return;
+    }
+
+    // Parse User lưu email ở field 'email' (built-in) hoặc 'mail' (custom) — thử cả hai
+    const email =
+      (consigner.get('email') as string) || (consigner.get('mail') as string);
 
     if (!email) {
-      console.warn(
-        `[sendConfirmationEmail] consigner ${consigner.id} không có email — bỏ qua`
+      console.error(
+        `[sendConfirmationEmail] consigner ${consigner.id} không có email (field 'email' và 'mail' đều rỗng) — bỏ qua`
       );
       return;
     }

@@ -42,8 +42,16 @@ const afterCreate = async (
 
   await Promise.all(promises);
 
-  // Gửi email xác nhận ký gửi — fire-and-forget
-  sendConfirmationEmail(consignment);
+  // Fetch lại với include consigner để có đủ thông tin email — fire-and-forget
+  try {
+    const query = new Parse.Query(Consignment);
+    const fullConsignment = await query
+      .include('consigner')
+      .get(consignment.id, { useMasterKey: true });
+    sendConfirmationEmail(fullConsignment);
+  } catch (err) {
+    console.error('[afterCreate] Failed to fetch consignment for email:', err);
+  }
 };
 
 const afterDelete = async (
@@ -91,8 +99,8 @@ const beforeSave = async (request: Parse.Cloud.BeforeSaveRequest) => {
 const afterSave = async (
   request: Parse.Cloud.AfterSaveRequest<Consignment>
 ) => {
-  if (request.context.isNew) afterCreate(request);
-  if (request.context.isDeleted) afterDelete(request);
+  if (request.context.isNew) await afterCreate(request);
+  if (request.context.isDeleted) await afterDelete(request);
 };
 
 export { beforeSave, afterSave };
