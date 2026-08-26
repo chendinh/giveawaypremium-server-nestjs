@@ -438,7 +438,7 @@ export const sendPaymentConfirmationEmail = async (
       bankId: bankId ?? '',
       moneyBack:
         (moneyBack ?? 0) > 0
-          ? `${(moneyBack ?? 0).toLocaleString('vi-VN')} vnd`
+          ? `${((moneyBack ?? 0) * 1000).toLocaleString('vi-VN')} vnd`
           : '0 vnd',
       note: note ?? '---',
     };
@@ -486,11 +486,16 @@ export const sendPaymentConfirmationEmail = async (
     return { success: true };
   }
 
+  // Truyền raw number thẳng vào sendPaymentEmail — tránh strip/format rồi format lại
+  const rawMoneyBackValue = !needsDBData
+    ? (moneyBack ?? 0) * 1000 // FE gửi đơn vị nghìn → nhân 1000
+    : ((finalData as any)._rawMoneyBack ?? 0);
+
   await sendPaymentEmail(
     finalConsigner,
     consignmentId,
     finalData.numberOfProduct,
-    (finalData.moneyBack as string).replace(/\D/g, '') as unknown as number,
+    rawMoneyBackValue,
     finalData.bankName,
     finalData.bankId,
     finalData.customerName,
