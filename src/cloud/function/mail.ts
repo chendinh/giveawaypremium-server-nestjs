@@ -61,7 +61,9 @@ export function buildEmailData(consignment: Consignment): ConsignmentEmailData {
   const customerName = (consigner?.get('name') as string) ?? '';
   const phoneNumber = (consigner?.get('phone') as string) ?? '';
   const identityId = (consigner?.get('identityId') as string) ?? '';
-  const consignmentId = consignment.id;
+  // Dùng field consignmentId ("47-1126") thay vì Parse objectId
+  const consignmentId =
+    (consignment.get('consignmentId') as string) || consignment.id;
   const bankName = (consignment.get('bankName') as string) ?? '';
   const bankId = (consignment.get('bankId') as string) ?? '';
   const timeGetMoney = (consignment.get('timeGetMoney') as string) ?? '';
@@ -169,7 +171,7 @@ const remiderConsignment = async (consignment: Consignment): Promise<void> => {
 
     await emailFactory.send({
       mailTo: email,
-      title: `Give Away Premium thông báo: đơn hàng ${consignment.id}`, // Subject line
+      title: `Give Away Premium thông báo: đơn hàng ${consignment.get('consignmentId') || consignment.id}`, // Subject line
       html,
     });
 
@@ -212,7 +214,7 @@ export const sendConfirmationEmail = async (
 
     await emailFactory.send({
       mailTo: email,
-      title: `Give Away Premium - Biên nhận ký gửi ${consignment.id}`,
+      title: `Give Away Premium - Biên nhận ký gửi ${consignment.get('consignmentId') || consignment.id}`,
       html,
     });
   } catch (error) {

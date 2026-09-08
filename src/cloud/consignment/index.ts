@@ -78,6 +78,48 @@ const beforeSave = async (request: Parse.Cloud.BeforeSaveRequest) => {
 
     if (consignment.isNew()) {
       request.context.isNew = true;
+
+      // ── Auto-generate consignmentId server-side để tránh race condition ──
+      // Client gửi consignmentId sơ bộ để hiển thị, server sẽ overwrite
+      // với giá trị chính xác dựa trên count thực tế trong DB.
+      const group = consignment.get('group') as Parse.Object | undefined;
+      if (group && group.id) {
+        try {
+          // Fetch group để lấy code (ví dụ: "1126")
+          await group.fetch({ useMasterKey: true });
+          const groupCode = group.get('code') as string | undefined;
+
+          // Đếm tất cả consignment trong group này (kể cả chưa deletedAt)
+          const countQuery = new Parse.Query('Consignment');
+          countQuery.equalTo('group', group);
+          const count = await countQuery.count({ useMasterKey: true });
+
+          const newConsignmentId = groupCode
+            ? `${count + 1}-${groupCode}`
+            : `${count + 1}`;
+
+          consignment.set('consignmentId', newConsignmentId);
+
+          // Cập nhật code của từng product trong productList theo consignmentId mới
+          const rawProducts = consignment.get('productList');
+          if (Array.isArray(rawProducts)) {
+            const updatedProductList = rawProducts.map(
+              (product: any, idx: number) => ({
+                ...product,
+                code: `${newConsignmentId}-${idx + 1}`,
+              })
+            );
+            consignment.set('productList', updatedProductList);
+          }
+        } catch (err) {
+          console.error(
+            '[Consignment beforeSave] auto-generate consignmentId error:',
+            err
+          );
+          // Không throw — fallback về giá trị client gửi lên
+        }
+      }
+
       // Copy identityId từ consigner vào Consignment để dùng cho email
       const consigner = consignment.get('consigner');
       if (consigner && consigner.id) {
