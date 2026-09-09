@@ -233,8 +233,10 @@ const beforeSave = async (request: Parse.Cloud.BeforeSaveRequest<Order>) => {
 const afterSave = async (request: Parse.Cloud.AfterSaveRequest<Order>) => {
   const context = request.context;
 
-  if (context.isNew) afterCreate(request);
-  if (context.isDeleted) afterDelete(request);
+  // Await để đảm bảo stock được trừ trước khi afterSave kết thúc.
+  // Fire-and-forget trước đây là bug: lỗi bên trong afterCreate bị nuốt im lặng.
+  if (context.isNew) await afterCreate(request);
+  if (context.isDeleted) await afterDelete(request);
 };
 
 const afterFind = async (request: Parse.Cloud.AfterFindRequest<Order>) => {
