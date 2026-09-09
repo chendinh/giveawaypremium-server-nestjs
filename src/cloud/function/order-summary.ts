@@ -53,7 +53,7 @@ export const getOrderSummary = async (
   }
 
   // Query tất cả orders trong khoảng thời gian, không include nested objects
-  // Chỉ lấy các fields cần cho summary — không include client/transporter/productList
+  // Chỉ lấy các fields cần cho summary — không include client/productList
   // findAll() không cho dùng limit/skip/sort nên KHÔNG set những thứ đó
   const query = new Parse.Query('Order');
   query.doesNotExist('deletedAt');
@@ -66,6 +66,8 @@ export const getOrderSummary = async (
     'isOnlineSale',
     'transferBankMoneyAmount',
     'transferOfflineMoneyAmount',
+    // Lấy transporter pointer để detect đơn VTP/GHTK bị thiếu flag isOnlineSale
+    'transporter',
   ]);
 
   const orders = await query.findAll({ useMasterKey: true });
@@ -84,7 +86,10 @@ export const getOrderSummary = async (
     const total = Number(order.get('totalMoneyForSale')) || 0;
     const totalAfterFee = Number(order.get('totalMoneyForSaleAfterFee')) || 0;
     const productCount = Number(order.get('totalNumberOfProductForSale')) || 0;
-    const isOnline = Boolean(order.get('isOnlineSale'));
+    // Đơn có transporter (vận đơn VTP/GHTK) luôn được tính là online,
+    // dù field isOnlineSale có thể bị thiếu/sai ở đơn cũ
+    const hasTransporter = !!order.get('transporter');
+    const isOnline = hasTransporter || Boolean(order.get('isOnlineSale'));
 
     const bankAmt = Number(order.get('transferBankMoneyAmount'));
     const offlineAmt = Number(order.get('transferOfflineMoneyAmount'));
