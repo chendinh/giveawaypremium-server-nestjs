@@ -5,12 +5,85 @@ import {
 } from '../../common/transporter.utils';
 import { OrderRequestStatus } from '../../constants/order-status';
 import { getOrder, cancelOrder } from '../../external-services/transporter';
+import { Consignment } from '../../models/consignment';
 import { Order } from '../../models/order';
 import { OrderRequest } from '../../models/order.request';
 import { Product } from '../../models/product';
 import { StockLog, StockLogReason } from '../../models/stock.log';
 import { Transporter } from '../../models/transporter';
 import { updateOrderRequestQueue } from '../order-request';
+import sum = require('lodash/sum');
+
+/**
+ * Sync aggregate fields của Consignment từ tất cả Products của nó.
+ * Gọi sau khi TẤT CẢ product saves hoàn thành để tránh race condition.
+ */
+const syncConsignmentById = async (consignmentId: string): Promise<void> => {
+  try {
+    const consignment = await new Parse.Query(Consignment).get(consignmentId, {
+      useMasterKey: true,
+    });
+
+    const consignmentPointer = new Consignment();
+    consignmentPointer.id = consignmentId;
+
+    const products = await new Parse.Query(Product)
+      .equalTo('consignment', consignmentPointer)
+      .doesNotExist('deletedAt')
+      .find({ useMasterKey: true });
+
+    const productList = products.map(p => ({
+      ...p.toJSON(),
+      subCategoryId: p.get('subCategory')?.id ?? null,
+      categoryId: p.get('category')?.id ?? null,
+    }));
+
+    const numSoldConsignment = sum(
+      products.map(p => p.get('soldNumberProduct') ?? 0)
+    );
+    const remainNumConsignment = sum(
+      products.map(p => p.get('remainNumberProduct') ?? 0)
+    );
+    const numberOfPoducts = sum(products.map(p => p.get('count') ?? 0));
+
+    const getRate = (price: number) =>
+      price <= 0 ? 0 : price < 1000 ? 0.74 : price <= 10000 ? 0.77 : 0.8;
+
+    const moneyBackForFullSold = sum(
+      products.map(p => {
+        const price = p.get('price') ?? 0;
+        return price * getRate(price) * (p.get('count') ?? 0);
+      })
+    );
+    const totalMoney = sum(
+      products.map(p => (p.get('price') ?? 0) * (p.get('count') ?? 0))
+    );
+    const moneyBack = sum(
+      products.map(p => {
+        const price = p.get('price') ?? 0;
+        return price * getRate(price) * (p.get('soldNumberProduct') ?? 0);
+      })
+    );
+
+    await consignment.save(
+      {
+        productList,
+        numSoldConsignment,
+        remainNumConsignment,
+        numberOfPoducts,
+        moneyBackForFullSold,
+        totalMoney,
+        moneyBack,
+      },
+      { useMasterKey: true }
+    );
+  } catch (err) {
+    console.error(
+      `[Order syncConsignmentById] consignment ${consignmentId} failed:`,
+      (err as any)?.message || err
+    );
+  }
+};
 
 /**
  * Ghi StockLog cho một product.
@@ -117,6 +190,34 @@ const afterCreate = async (request: Parse.Cloud.AfterSaveRequest) => {
   try {
     const order = request.object;
     const productList = order.get('productList') || [];
+
+    // Pre-collect consignmentId từ plain data — không phụ thuộc fetch thành công
+    // Note: getProductWithCode không include 'consignment' nên plain data thường không có,
+    // nhưng để đây phòng trường hợp future có include.
+    const consignmentIdsToSync = new Set<string>();
+    productList.forEach((item: any) => {
+      const cid = item?.consignment?.objectId || item?.consignmentId;
+      if (cid) consignmentIdsToSync.add(cid);
+    });
+
+    // Fallback: query consignment trực tiếp từ DB cho các product có objectId
+    // Chạy trước, song song với việc trừ stock — để đảm bảo consignmentId luôn có
+    // dù fetch product trong vòng lặp bên dưới có fail
+    const collectConsignmentIds = productList
+      .filter((item: any) => item?.objectId)
+      .map(async (item: any) => {
+        try {
+          const p = await new Parse.Query(Product)
+            .select('consignment')
+            .get(item.objectId, { useMasterKey: true });
+          const cid = p.get('consignment')?.id;
+          if (cid) consignmentIdsToSync.add(cid);
+        } catch {
+          // không tìm thấy — skip, không block
+        }
+      });
+    // Không await ở đây — chạy song song với stock update, kết quả được dùng sau Promise.all
+
     const promise = productList
       .filter((product: any) => product?.objectId) // skip nếu không có objectId
       .map(async (product: any) => {
@@ -140,6 +241,10 @@ const afterCreate = async (request: Parse.Cloud.AfterSaveRequest) => {
           prod.decrement('remainNumberProduct', product.count);
           await prod.save(undefined, { useMasterKey: true });
 
+          // Collect thêm từ DB record (chắc chắn nhất)
+          const consignmentId = prod.get('consignment')?.id;
+          if (consignmentId) consignmentIdsToSync.add(consignmentId);
+
           writeStockLog(
             product.objectId,
             order.id,
@@ -154,7 +259,7 @@ const afterCreate = async (request: Parse.Cloud.AfterSaveRequest) => {
           );
           return;
         } catch (err) {
-          // Product không tìm thấy — log nhưng không crash
+          // Product không tìm thấy — log nhưng không crash toàn bộ flow
           console.error(
             `[Order afterCreate] Product ${product.objectId} not found:`,
             err?.message || err
@@ -163,6 +268,17 @@ const afterCreate = async (request: Parse.Cloud.AfterSaveRequest) => {
         }
       });
     await Promise.all(promise);
+    // Đợi cả collectConsignmentIds hoàn thành để đảm bảo Set đầy đủ
+    await Promise.all(collectConsignmentIds);
+
+    // Sau khi TẤT CẢ products đã save xong mới sync aggregate consignment.
+    // consignmentIdsToSync đã được collect cả từ plain data lẫn DB fetch
+    // nên vẫn sync dù một vài product fetch thất bại.
+    if (consignmentIdsToSync.size > 0) {
+      await Promise.all(
+        [...consignmentIdsToSync].map(cid => syncConsignmentById(cid))
+      );
+    }
 
     if (order.has('orderRequest')) {
       const orderRequest = order.get('orderRequest') as OrderRequest;
@@ -175,13 +291,35 @@ const afterCreate = async (request: Parse.Cloud.AfterSaveRequest) => {
 const afterDelete = async (request: Parse.Cloud.AfterSaveRequest<Order>) => {
   const order = request.object;
   const productList = order.get('productList') || [];
+
+  // Pre-collect consignmentId từ plain data — không phụ thuộc fetch thành công
+  const consignmentIdsToSync = new Set<string>();
+  productList.forEach((item: any) => {
+    const cid = item?.consignment?.objectId || item?.consignmentId;
+    if (cid) consignmentIdsToSync.add(cid);
+  });
+
+  // Fallback: query trực tiếp từ DB song song với việc hoàn stock
+  const collectConsignmentIds = productList
+    .filter((item: any) => item?.objectId)
+    .map(async (item: any) => {
+      try {
+        const p = await new Parse.Query(Product)
+          .select('consignment')
+          .get(item.objectId, { useMasterKey: true });
+        const cid = p.get('consignment')?.id;
+        if (cid) consignmentIdsToSync.add(cid);
+      } catch {
+        // không tìm thấy — skip
+      }
+    });
+
   const promise = productList
     .filter((product: any) => product?.objectId)
     .map(async (product: any) => {
       const productPointer = new Product();
       productPointer.id = product.objectId;
 
-      // Fetch để lấy snapshot trước khi hoàn stock
       try {
         const prod = await productPointer.fetch({ useMasterKey: true });
         const remainBefore = prod.get('remainNumberProduct') ?? 0;
@@ -190,6 +328,10 @@ const afterDelete = async (request: Parse.Cloud.AfterSaveRequest<Order>) => {
         prod.decrement('soldNumberProduct', product.count);
         prod.increment('remainNumberProduct', product.count);
         await prod.save(undefined, { useMasterKey: true });
+
+        // Collect thêm từ DB record
+        const consignmentId = prod.get('consignment')?.id;
+        if (consignmentId) consignmentIdsToSync.add(consignmentId);
 
         writeStockLog(
           product.objectId,
@@ -211,6 +353,15 @@ const afterDelete = async (request: Parse.Cloud.AfterSaveRequest<Order>) => {
       }
     });
   await Promise.all(promise);
+  await Promise.all(collectConsignmentIds);
+
+  // Sync consignment sau khi hoàn stock toàn bộ
+  if (consignmentIdsToSync.size > 0) {
+    await Promise.all(
+      [...consignmentIdsToSync].map(cid => syncConsignmentById(cid))
+    );
+  }
+
   cancelOrderTransporter(order).catch(console.error);
 };
 

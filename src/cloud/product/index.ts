@@ -20,42 +20,40 @@ const syncConsignment = async (
   // Guard: Product không có consignment thì skip
   if (!consignmentPointer) return;
 
-  // #8 Performance: chỉ sync khi các field liên quan đến số liệu thay đổi
+  // Chỉ sync khi các field liên quan đến số liệu thay đổi
   // Tránh sync khi save media, note, hay field không ảnh hưởng aggregate
-  //
-  // QUAN TRỌNG: Parse SDK reset dirty() về false SAU KHI save() thành công.
-  // Khi Order.afterSave gọi prod.save() → Product.afterSave được trigger,
-  // lúc này product.dirty('soldNumberProduct') luôn = false dù vừa increment.
-  // Fix: dùng _previousData để so sánh giá trị trước/sau thay vì dirty().
   const isNew = request.context?.isNew;
-  const original = request.original; // object snapshot TRƯỚC khi save (Parse cung cấp)
+  const original = request.original;
 
   let hasDirtyStockField: boolean;
   if (original) {
-    // afterSave luôn có request.original khi là update
     hasDirtyStockField = STOCK_DIRTY_FIELDS.some(f => {
       const before = original.get(f);
       const after = product.get(f);
-      // So sánh bằng JSON để handle Date, null, undefined
       return JSON.stringify(before) !== JSON.stringify(after);
     });
   } else {
-    // Fallback nếu original không có (trường hợp lạ) — sync luôn cho an toàn
+    // original undefined khi trigger từ server-side Cloud Code (prod.save() trong Order.afterCreate)
+    // — sync luôn cho an toàn
     hasDirtyStockField = true;
   }
 
   if (!isNew && !hasDirtyStockField) return;
 
-  const query = new Parse.Query(Consignment);
   const consignmentId = consignmentPointer.id;
   if (!consignmentId) return;
 
-  const consignment = await query
-    .equalTo('objectId', consignmentId)
-    .greaterThan('createdAt', new Date('2022-08-04T15:04:06.196Z'))
-    .first();
+  // Fetch consignment trực tiếp bằng objectId — không cần filter date thừa
+  const consignment = await new Parse.Query(Consignment)
+    .get(consignmentId, {
+      useMasterKey: true,
+    })
+    .catch(() => null);
 
   if (!consignment) {
+    console.warn(
+      `[Product syncConsignment] Consignment ${consignmentId} not found — skip sync`
+    );
     return;
   }
 
@@ -63,66 +61,47 @@ const syncConsignment = async (
   const products = await prodQuery
     .equalTo('consignment', consignmentPointer)
     .doesNotExist('deletedAt')
-    .find();
-  const productList = products.map(product => {
-    const productJson = product.toJSON();
+    .find({ useMasterKey: true });
+
+  const productList = products.map(p => {
+    const productJson = p.toJSON();
     return {
       ...productJson,
-      subCategoryId: product.get('subCategory')?.id ?? null,
-      categoryId: product.get('category')?.id ?? null,
+      subCategoryId: p.get('subCategory')?.id ?? null,
+      categoryId: p.get('category')?.id ?? null,
     };
   });
-  const soldNumberProducts = products.map(
-    product => product.get('soldNumberProduct') ?? 0
+
+  const numSoldConsignment = sum(
+    products.map(p => p.get('soldNumberProduct') ?? 0)
   );
-  const numSoldConsignment = sum(soldNumberProducts);
-  const remainNumberProducts = products.map(
-    product => product.get('remainNumberProduct') ?? 0
+  const remainNumConsignment = sum(
+    products.map(p => p.get('remainNumberProduct') ?? 0)
   );
-  const remainNumConsignment = sum(remainNumberProducts);
-  const counts = products.map(product => product.get('count') ?? 0);
-  const numberOfPoducts = sum(counts);
-  const moneyBackForFullSolds = products.map(product => {
-    const productPrice = product.get('price') ?? 0;
-    const count = product.get('count') ?? 0;
-    let moneyBackSold = productPrice;
+  const numberOfPoducts = sum(products.map(p => p.get('count') ?? 0));
 
-    if (productPrice > 0) {
-      if (productPrice < 1000) {
-        moneyBackSold = (productPrice * 74) / 100;
-      } else if (productPrice >= 1000 && productPrice <= 10000) {
-        moneyBackSold = (productPrice * 77) / 100;
-      } else if (productPrice > 10000) {
-        moneyBackSold = (productPrice * 80) / 100;
-      }
-    }
-    return moneyBackSold * count;
-  });
-  const moneyBackForFullSold = sum(moneyBackForFullSolds);
-  const totalMoneys = products.map(product => {
-    const productPrice = product.get('price') ?? 0;
-    const count = product.get('count') ?? 0;
+  const moneyBackForFullSold = sum(
+    products.map(p => {
+      const price = p.get('price') ?? 0;
+      const count = p.get('count') ?? 0;
+      let rate = price < 1000 ? 0.74 : price <= 10000 ? 0.77 : 0.8;
+      return price > 0 ? price * rate * count : 0;
+    })
+  );
 
-    return productPrice * count;
-  });
-  const totalMoney = sum(totalMoneys);
-  const moneyBackProduct = products.map(product => {
-    const productPrice = product.get('price') ?? 0;
-    const soldNumberProduct = product.get('soldNumberProduct') ?? 0;
-    let moneyBackSold = productPrice;
+  const totalMoney = sum(
+    products.map(p => (p.get('price') ?? 0) * (p.get('count') ?? 0))
+  );
 
-    if (productPrice > 0) {
-      if (productPrice < 1000) {
-        moneyBackSold = (productPrice * 74) / 100;
-      } else if (productPrice >= 1000 && productPrice <= 10000) {
-        moneyBackSold = (productPrice * 77) / 100;
-      } else if (productPrice > 10000) {
-        moneyBackSold = (productPrice * 80) / 100;
-      }
-    }
-    return moneyBackSold * soldNumberProduct;
-  });
-  const moneyBack = sum(moneyBackProduct);
+  const moneyBack = sum(
+    products.map(p => {
+      const price = p.get('price') ?? 0;
+      const sold = p.get('soldNumberProduct') ?? 0;
+      let rate = price < 1000 ? 0.74 : price <= 10000 ? 0.77 : 0.8;
+      return price > 0 ? price * rate * sold : 0;
+    })
+  );
+
   await consignment.save(
     {
       productList,
