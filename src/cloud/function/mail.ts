@@ -75,7 +75,11 @@ export function buildEmailData(consignment: Consignment): ConsignmentEmailData {
     : '';
 
   const productList: RawProduct[] = consignment.get('productList') ?? [];
-  const numberOfProduct = productList.length;
+  // Tổng số lượng sản phẩm (sum of count), không phải số dòng
+  const numberOfProduct = productList.reduce(
+    (sum, p) => sum + (Number(p.count) || 1),
+    0
+  );
 
   const products: ProductEmailItem[] = productList.map(rawProduct => ({
     name: rawProduct.name,
