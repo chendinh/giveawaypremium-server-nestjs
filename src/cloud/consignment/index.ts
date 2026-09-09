@@ -2,6 +2,7 @@ import { Category } from '../../models/category';
 import { Consignment } from '../../models/consignment';
 import { Product } from '../../models/product';
 import { SubCategory } from '../../models/sub.category';
+import { getNextConsignmentSeq } from './counter';
 
 const afterCreate = async (
   request: Parse.Cloud.AfterSaveRequest<Consignment>
@@ -85,18 +86,15 @@ const beforeSave = async (request: Parse.Cloud.BeforeSaveRequest) => {
       const group = consignment.get('group') as Parse.Object | undefined;
       if (group && group.id) {
         try {
-          // Fetch group để lấy code (ví dụ: "1126")
+          // Fetch group để lấy code (ví dụ: "926")
           await group.fetch({ useMasterKey: true });
           const groupCode = group.get('code') as string | undefined;
 
-          // Đếm tất cả consignment trong group này (kể cả chưa deletedAt)
-          const countQuery = new Parse.Query('Consignment');
-          countQuery.equalTo('group', group);
-          const count = await countQuery.count({ useMasterKey: true });
-
-          const newConsignmentId = groupCode
-            ? `${count + 1}-${groupCode}`
-            : `${count + 1}`;
+          // Atomic increment thay vì count() — tránh race condition:
+          // 2 request cùng lúc với count() sẽ đếm cùng số → tạo ID trùng.
+          // getNextConsignmentSeq() dùng Parse.increment() → MongoDB $inc → atomic.
+          const seq = await getNextConsignmentSeq(group.id, group);
+          const newConsignmentId = groupCode ? `${seq}-${groupCode}` : `${seq}`;
 
           consignment.set('consignmentId', newConsignmentId);
 

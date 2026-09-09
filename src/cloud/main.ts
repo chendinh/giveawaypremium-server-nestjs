@@ -401,3 +401,62 @@ setTimeout(() => {
     console.error('[VTP Token] Init failed:', err)
   );
 }, 3000);
+
+// ─── Đảm bảo unique index trên AppointmentSchedule.slot ───────────────────────
+// Chặn race condition: 2 request đến cùng lúc đều pass count() === 0 check
+// trong beforeSave, nhưng MongoDB sẽ reject cái insert thứ hai.
+// Index là idempotent (ensureIndex) — chạy lại nhiều lần không gây lỗi.
+setTimeout(() => {
+  const schema = new Parse.Schema('AppointmentSchedule');
+  schema
+    .addIndex('slot_unique_idx', { slot: 1 }, { unique: true, sparse: true })
+    .update({ useMasterKey: true } as any)
+    .then(() =>
+      console.info('[AppointmentSchedule] Unique index on slot ensured')
+    )
+    .catch((err: any) => {
+      // Index đã tồn tại → lỗi code 111 hoặc 'already exists' — bỏ qua
+      const msg = err?.message || '';
+      if (
+        err?.code === 111 ||
+        msg.includes('already exists') ||
+        msg.includes('IndexOptionsConflict')
+      ) {
+        console.info('[AppointmentSchedule] Unique index already exists — OK');
+      } else {
+        console.error(
+          '[AppointmentSchedule] Failed to ensure unique index:',
+          msg
+        );
+      }
+    });
+}, 4000);
+
+// ─── Đảm bảo unique index trên ConsignmentCounter.groupId ─────────────────────
+// Tránh tạo 2 counter cho cùng 1 group nếu 2 consignment tạo đồng thời
+// khi counter chưa tồn tại. MongoDB sẽ reject insert thứ hai → getNextConsignmentSeq
+// sẽ fetch lại counter vừa được tạo.
+setTimeout(() => {
+  const counterSchema = new Parse.Schema('ConsignmentCounter');
+  counterSchema
+    .addIndex('groupId_unique_idx', { groupId: 1 }, { unique: true })
+    .update({ useMasterKey: true } as any)
+    .then(() =>
+      console.info('[ConsignmentCounter] Unique index on groupId ensured')
+    )
+    .catch((err: any) => {
+      const msg = err?.message || '';
+      if (
+        err?.code === 111 ||
+        msg.includes('already exists') ||
+        msg.includes('IndexOptionsConflict')
+      ) {
+        console.info('[ConsignmentCounter] Unique index already exists — OK');
+      } else {
+        console.error(
+          '[ConsignmentCounter] Failed to ensure unique index:',
+          msg
+        );
+      }
+    });
+}, 4500);
