@@ -83,31 +83,54 @@ const beforeSave = async (request: Parse.Cloud.BeforeSaveRequest) => {
       // ── Auto-generate consignmentId server-side để tránh race condition ──
       // Client gửi consignmentId sơ bộ để hiển thị, server sẽ overwrite
       // với giá trị chính xác dựa trên count thực tế trong DB.
+      // Ngoại lệ: nếu client set isCustomId = true → giữ nguyên mã client gửi lên
+      // (dùng cho KOL/VIP cần mã đặc biệt như "th1-1126").
+      // Counter vẫn KHÔNG tăng trong trường hợp này để tránh lệch seq.
       const group = consignment.get('group') as Parse.Object | undefined;
+      const isCustomId = consignment.get('isCustomId') as boolean | undefined;
+
       if (group && group.id) {
         try {
           // Fetch group để lấy code (ví dụ: "926")
           await group.fetch({ useMasterKey: true });
           const groupCode = group.get('code') as string | undefined;
 
-          // Atomic increment thay vì count() — tránh race condition:
-          // 2 request cùng lúc với count() sẽ đếm cùng số → tạo ID trùng.
-          // getNextConsignmentSeq() dùng Parse.increment() → MongoDB $inc → atomic.
-          const seq = await getNextConsignmentSeq(group.id, group);
-          const newConsignmentId = groupCode ? `${seq}-${groupCode}` : `${seq}`;
+          if (isCustomId) {
+            // Mã custom — giữ nguyên consignmentId client gửi lên.
+            // Chỉ cập nhật product codes theo mã custom đó.
+            const customId = consignment.get('consignmentId') as string;
+            const rawProducts = consignment.get('productList');
+            if (Array.isArray(rawProducts) && customId) {
+              const updatedProductList = rawProducts.map(
+                (product: any, idx: number) => ({
+                  ...product,
+                  code: `${customId}-${idx + 1}`,
+                })
+              );
+              consignment.set('productList', updatedProductList);
+            }
+          } else {
+            // Atomic increment thay vì count() — tránh race condition:
+            // 2 request cùng lúc với count() sẽ đếm cùng số → tạo ID trùng.
+            // getNextConsignmentSeq() dùng Parse.increment() → MongoDB $inc → atomic.
+            const seq = await getNextConsignmentSeq(group.id, group);
+            const newConsignmentId = groupCode
+              ? `${seq}-${groupCode}`
+              : `${seq}`;
 
-          consignment.set('consignmentId', newConsignmentId);
+            consignment.set('consignmentId', newConsignmentId);
 
-          // Cập nhật code của từng product trong productList theo consignmentId mới
-          const rawProducts = consignment.get('productList');
-          if (Array.isArray(rawProducts)) {
-            const updatedProductList = rawProducts.map(
-              (product: any, idx: number) => ({
-                ...product,
-                code: `${newConsignmentId}-${idx + 1}`,
-              })
-            );
-            consignment.set('productList', updatedProductList);
+            // Cập nhật code của từng product trong productList theo consignmentId mới
+            const rawProducts = consignment.get('productList');
+            if (Array.isArray(rawProducts)) {
+              const updatedProductList = rawProducts.map(
+                (product: any, idx: number) => ({
+                  ...product,
+                  code: `${newConsignmentId}-${idx + 1}`,
+                })
+              );
+              consignment.set('productList', updatedProductList);
+            }
           }
         } catch (err) {
           console.error(
