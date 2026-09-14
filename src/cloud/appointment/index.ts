@@ -9,7 +9,7 @@
  * 2. Lấy Setting hiện tại từ DB
  * 3. Kiểm tra form đặt lịch có đang mở không (IS_SHOW_BOOKING_FORM)
  * 4. Tìm option cho ngày đó (BOOKING_OPTION_EACH_DAY + BOOKING_OPTION_CUSTOM_EACH_DAY)
- * 5. Nếu ngày là OPTION_7 (off) → reject
+ * 5. Nếu ngày là OPTION_7 hoặc chưa config (default = 7) → reject
  * 6. Nếu slot timeCode bị tắt (custom) → reject
  * 7. Kiểm tra slot chưa bị ai chiếm (race condition guard)
  */
@@ -37,7 +37,7 @@ const getDayNameFromDayCode = (dayCode: string): string => {
 
 /**
  * Tìm option number cho một dayCode, dựa trên BOOKING_OPTION_EACH_DAY setting.
- * Default = 8 nếu không tìm thấy.
+ * Default = 7 (khoá) nếu ngày chưa được cấu hình — fail-closed.
  */
 const findOptionForDay = (
   dayCode: string,
@@ -48,7 +48,7 @@ const findOptionForDay = (
     const val = bookingOptionEachDay[key];
     if (val && val.includes(dayCode)) return i;
   }
-  return 8; // default
+  return 7; // default = khoá — ngày chưa config thì không nhận lịch
 };
 
 export const beforeSave = async (
@@ -105,14 +105,6 @@ export const beforeSave = async (
     throw new Parse.Error(
       142,
       `Ngày ${dayCode.substring(0, 2)}/${dayCode.substring(2, 4)}/${dayCode.substring(4, 8)} (${dayName}) hiện không nhận lịch hẹn. Vui lòng chọn ngày khác hoặc gọi hotline 0703 334 443.`
-    );
-  }
-
-  // OPTION_1 = đóng (không có slot nào)
-  if (option === 1) {
-    throw new Parse.Error(
-      142,
-      `Khung giờ này hiện đã đóng. Vui lòng chọn ngày khác hoặc gọi hotline 0703 334 443.`
     );
   }
 

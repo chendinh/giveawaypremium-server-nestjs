@@ -12,8 +12,8 @@ export interface ProductEmailItem {
   name: string;
   amount: number;
   status: string;
-  price: number;
-  priceAfterFee: number;
+  price: string; // formatted: "1,500,000 vnd"
+  priceAfterFee: string; // formatted: "1,350,000 vnd"
 }
 
 export interface ConsignmentEmailData {
@@ -81,12 +81,17 @@ export function buildEmailData(consignment: Consignment): ConsignmentEmailData {
     0
   );
 
+  const formatPrice = (value: number | undefined | null): string => {
+    const num = Number(value) || 0;
+    return num > 0 ? `${num.toLocaleString('vi-VN')} vnd` : '0 vnd';
+  };
+
   const products: ProductEmailItem[] = productList.map(rawProduct => ({
     name: rawProduct.name,
     amount: rawProduct.count,
     status: rawProduct.rateNew ?? '',
-    price: rawProduct.price,
-    priceAfterFee: rawProduct.priceAfterFee,
+    price: formatPrice(rawProduct.price),
+    priceAfterFee: formatPrice(rawProduct.priceAfterFee),
   }));
 
   return {
