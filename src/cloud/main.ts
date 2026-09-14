@@ -409,8 +409,8 @@ setTimeout(() => {
 setTimeout(() => {
   const schema = new Parse.Schema('AppointmentSchedule');
   schema
-    .addIndex('slot_unique_idx', { slot: 1 }, { unique: true, sparse: true })
-    .update({ useMasterKey: true } as any)
+    .addIndex('slot_unique_idx', { slot: 1, unique: true, sparse: true })
+    .update()
     .then(() =>
       console.info('[AppointmentSchedule] Unique index on slot ensured')
     )
@@ -439,8 +439,8 @@ setTimeout(() => {
 setTimeout(() => {
   const counterSchema = new Parse.Schema('ConsignmentCounter');
   counterSchema
-    .addIndex('groupId_unique_idx', { groupId: 1 }, { unique: true })
-    .update({ useMasterKey: true } as any)
+    .addIndex('groupId_unique_idx', { groupId: 1, unique: true })
+    .update()
     .then(() =>
       console.info('[ConsignmentCounter] Unique index on groupId ensured')
     )
