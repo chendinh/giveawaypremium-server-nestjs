@@ -405,58 +405,49 @@ setTimeout(() => {
 // ─── Đảm bảo unique index trên AppointmentSchedule.slot ───────────────────────
 // Chặn race condition: 2 request đến cùng lúc đều pass count() === 0 check
 // trong beforeSave, nhưng MongoDB sẽ reject cái insert thứ hai.
-// Index là idempotent (ensureIndex) — chạy lại nhiều lần không gây lỗi.
-setTimeout(() => {
-  const schema = new Parse.Schema('AppointmentSchedule');
-  schema
-    .addIndex('slot_unique_idx', { slot: 1, unique: true, sparse: true })
-    .update()
-    .then(() =>
-      console.info('[AppointmentSchedule] Unique index on slot ensured')
-    )
-    .catch((err: any) => {
-      // Index đã tồn tại → lỗi code 111 hoặc 'already exists' — bỏ qua
-      const msg = err?.message || '';
-      if (
-        err?.code === 111 ||
-        msg.includes('already exists') ||
-        msg.includes('IndexOptionsConflict')
-      ) {
-        console.info('[AppointmentSchedule] Unique index already exists — OK');
-      } else {
-        console.error(
-          '[AppointmentSchedule] Failed to ensure unique index:',
-          msg
-        );
-      }
-    });
-}, 4000);
+// Parse.Schema.addIndex chỉ hỗ trợ { [field]: 1 | -1 } — dùng native MongoDB
+// adapter để set unique constraint.
+setTimeout(async () => {
+  try {
+    const adapter =
+      (Parse as any).CoreManager.getStorageController?.() ||
+      (Parse as any).server?.config?.databaseController?.adapter;
+    if (adapter?.database) {
+      const db = await adapter.database;
+      await db
+        .collection('AppointmentSchedule')
+        .createIndex(
+          { slot: 1 },
+          { unique: true, sparse: true, background: true }
+        )
+        .catch(() => {
+          /* index already exists */
+        });
+    }
+  } catch {
+    // non-critical — log suppressed
+  }
+}, 3000);
 
 // ─── Đảm bảo unique index trên ConsignmentCounter.groupId ─────────────────────
 // Tránh tạo 2 counter cho cùng 1 group nếu 2 consignment tạo đồng thời
 // khi counter chưa tồn tại. MongoDB sẽ reject insert thứ hai → getNextConsignmentSeq
 // sẽ fetch lại counter vừa được tạo.
-setTimeout(() => {
-  const counterSchema = new Parse.Schema('ConsignmentCounter');
-  counterSchema
-    .addIndex('groupId_unique_idx', { groupId: 1, unique: true })
-    .update()
-    .then(() =>
-      console.info('[ConsignmentCounter] Unique index on groupId ensured')
-    )
-    .catch((err: any) => {
-      const msg = err?.message || '';
-      if (
-        err?.code === 111 ||
-        msg.includes('already exists') ||
-        msg.includes('IndexOptionsConflict')
-      ) {
-        console.info('[ConsignmentCounter] Unique index already exists — OK');
-      } else {
-        console.error(
-          '[ConsignmentCounter] Failed to ensure unique index:',
-          msg
-        );
-      }
-    });
+setTimeout(async () => {
+  try {
+    const adapter =
+      (Parse as any).CoreManager.getStorageController?.() ||
+      (Parse as any).server?.config?.databaseController?.adapter;
+    if (adapter?.database) {
+      const db = await adapter.database;
+      await db
+        .collection('ConsignmentCounter')
+        .createIndex({ groupId: 1 }, { unique: true, background: true })
+        .catch(() => {
+          /* index already exists */
+        });
+    }
+  } catch {
+    // non-critical — log suppressed
+  }
 }, 4500);
