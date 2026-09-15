@@ -66,9 +66,10 @@ export const getOrderSummary = async (
     'isOnlineSale',
     'transferBankMoneyAmount',
     'transferOfflineMoneyAmount',
-    // Lấy transporter pointer để detect đơn VTP/GHTK bị thiếu flag isOnlineSale
+    // include transporter để check existence đúng (select alone không đủ với pointer)
     'transporter',
   ]);
+  query.include('transporter');
 
   const orders = await query.findAll({ useMasterKey: true });
 
@@ -86,10 +87,11 @@ export const getOrderSummary = async (
     const total = Number(order.get('totalMoneyForSale')) || 0;
     const totalAfterFee = Number(order.get('totalMoneyForSaleAfterFee')) || 0;
     const productCount = Number(order.get('totalNumberOfProductForSale')) || 0;
-    // Đơn có transporter (vận đơn VTP/GHTK) luôn được tính là online,
-    // dù field isOnlineSale có thể bị thiếu/sai ở đơn cũ
-    const hasTransporter = !!order.get('transporter');
-    const isOnline = hasTransporter || Boolean(order.get('isOnlineSale'));
+    // Đơn có transporter (vận đơn VTP/GHTK) → luôn là online dù isOnlineSale bị thiếu (đơn cũ)
+    // Dùng include('transporter') để pointer được fetch đúng, tránh stub luôn truthy
+    const transporter = order.get('transporter');
+    const hasTransporter = !!(transporter && transporter.id);
+    const isOnline = hasTransporter || order.get('isOnlineSale') === true;
 
     const bankAmt = Number(order.get('transferBankMoneyAmount'));
     const offlineAmt = Number(order.get('transferOfflineMoneyAmount'));
