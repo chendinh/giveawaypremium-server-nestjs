@@ -48,3 +48,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 public/build-info.json
+
+#lock
+pnpm-lock.yaml

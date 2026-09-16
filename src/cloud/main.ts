@@ -37,6 +37,7 @@ import {
 } from './function/vtp-address';
 import { getOrderSummary } from './function/order-summary';
 import { updateUserByAdmin } from './function/user';
+import { syncConsignmentStock } from './function/consignment-sync';
 
 const USER_CLOUD = {
   beforeCreate: async (
@@ -392,6 +393,12 @@ Parse.Cloud.define('updateUserByAdmin', updateUserByAdmin, {
       required: true,
     },
   },
+});
+
+// Cloud Function: syncConsignmentStock — re-sync remainNumConsignment từ Products thực tế
+// Dùng để sửa data stale do race condition. Yêu cầu master key.
+Parse.Cloud.define('syncConsignmentStock', syncConsignmentStock, {
+  requireMaster: true,
 });
 
 // ─── Khởi tạo ViettelPost token khi Parse Cloud load ──────────────────────────
