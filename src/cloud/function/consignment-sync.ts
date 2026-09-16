@@ -51,66 +51,76 @@ export const syncConsignmentStock = async (
   const getRate = (price: number) =>
     price <= 0 ? 0 : price < 1000 ? 0.74 : price <= 10000 ? 0.77 : 0.8;
 
-  for (const consignment of consignments) {
-    try {
-      const consignmentPointer = new Consignment();
-      consignmentPointer.id = consignment.id;
+  const syncOne = async (consignment: Consignment): Promise<void> => {
+    const consignmentPointer = new Consignment();
+    consignmentPointer.id = consignment.id;
 
-      const products = await new Parse.Query(Product)
-        .equalTo('consignment', consignmentPointer)
-        .doesNotExist('deletedAt')
-        .find({ useMasterKey: true });
+    const products = await new Parse.Query(Product)
+      .equalTo('consignment', consignmentPointer)
+      .doesNotExist('deletedAt')
+      .limit(500)
+      .find({ useMasterKey: true });
 
-      const productList = products.map(p => ({
-        ...p.toJSON(),
-        subCategoryId: p.get('subCategory')?.id ?? null,
-        categoryId: p.get('category')?.id ?? null,
-      }));
+    const productList = products.map(p => ({
+      ...p.toJSON(),
+      subCategoryId: p.get('subCategory')?.id ?? null,
+      categoryId: p.get('category')?.id ?? null,
+    }));
 
-      const numSoldConsignment = sum(
-        products.map(p => p.get('soldNumberProduct') ?? 0)
-      );
-      const remainNumConsignment = sum(
-        products.map(p => p.get('remainNumberProduct') ?? 0)
-      );
-      const numberOfPoducts = sum(products.map(p => p.get('count') ?? 0));
+    const numSoldConsignment = sum(
+      products.map(p => p.get('soldNumberProduct') ?? 0)
+    );
+    const remainNumConsignment = sum(
+      products.map(p => p.get('remainNumberProduct') ?? 0)
+    );
+    const numberOfPoducts = sum(products.map(p => p.get('count') ?? 0));
 
-      const moneyBackForFullSold = sum(
-        products.map(p => {
-          const price = p.get('price') ?? 0;
-          return price * getRate(price) * (p.get('count') ?? 0);
-        })
-      );
-      const totalMoney = sum(
-        products.map(p => (p.get('price') ?? 0) * (p.get('count') ?? 0))
-      );
-      const moneyBack = sum(
-        products.map(p => {
-          const price = p.get('price') ?? 0;
-          return price * getRate(price) * (p.get('soldNumberProduct') ?? 0);
-        })
-      );
+    const moneyBackForFullSold = sum(
+      products.map(p => {
+        const price = p.get('price') ?? 0;
+        return price * getRate(price) * (p.get('count') ?? 0);
+      })
+    );
+    const totalMoney = sum(
+      products.map(p => (p.get('price') ?? 0) * (p.get('count') ?? 0))
+    );
+    const moneyBack = sum(
+      products.map(p => {
+        const price = p.get('price') ?? 0;
+        return price * getRate(price) * (p.get('soldNumberProduct') ?? 0);
+      })
+    );
 
-      await consignment.save(
-        {
-          productList,
-          numSoldConsignment,
-          remainNumConsignment,
-          numberOfPoducts,
-          moneyBackForFullSold,
-          totalMoney,
-          moneyBack,
-        },
-        { useMasterKey: true }
-      );
-      synced++;
-    } catch (err) {
-      console.error(
-        `[syncConsignmentStock] consignment ${consignment.id} failed:`,
-        (err as any)?.message || err
-      );
-      errors++;
-    }
+    await consignment.save(
+      {
+        productList,
+        numSoldConsignment,
+        remainNumConsignment,
+        numberOfPoducts,
+        moneyBackForFullSold,
+        totalMoney,
+        moneyBack,
+      },
+      { useMasterKey: true }
+    );
+  };
+
+  // Chạy song song theo batch 10 để không overload DB
+  const BATCH = 10;
+  for (let i = 0; i < consignments.length; i += BATCH) {
+    const batch = consignments.slice(i, i + BATCH);
+    const results = await Promise.allSettled(batch.map(c => syncOne(c)));
+    results.forEach((r, idx) => {
+      if (r.status === 'fulfilled') {
+        synced++;
+      } else {
+        console.error(
+          `[syncConsignmentStock] consignment ${batch[idx].id} failed:`,
+          r.reason?.message || r.reason
+        );
+        errors++;
+      }
+    });
   }
 
   return { synced, errors };
