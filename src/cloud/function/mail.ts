@@ -58,9 +58,20 @@ interface RawProduct {
 export function buildEmailData(consignment: Consignment): ConsignmentEmailData {
   const consigner = consignment.getConsigner();
 
-  const customerName = (consigner?.get('name') as string) ?? '';
-  const phoneNumber = (consigner?.get('phone') as string) ?? '';
-  const identityId = (consigner?.get('identityId') as string) ?? '';
+  // Parse User fields: fullName (không phải 'name'), phoneNumber (không phải 'phone'),
+  // identityNumber (không phải 'identityId') — khớp với schema trong setCustomer/updateCustomer
+  const customerName =
+    (consigner?.get('fullName') as string) ||
+    (consigner?.get('name') as string) ||
+    '';
+  const phoneNumber =
+    (consigner?.get('phoneNumber') as string) ||
+    (consigner?.get('phone') as string) ||
+    '';
+  const identityId =
+    (consigner?.get('identityNumber') as string) ||
+    (consigner?.get('identityId') as string) ||
+    '';
   // Dùng field consignmentId ("47-1126") thay vì Parse objectId
   const consignmentId =
     (consignment.get('consignmentId') as string) || consignment.id;
@@ -195,11 +206,23 @@ export const sendConfirmationEmail = async (
   consignment: Consignment
 ): Promise<void> => {
   try {
-    const consigner = consignment.getConsigner();
+    let consigner = consignment.getConsigner();
 
     if (!consigner) {
       console.error(
         `[sendConfirmationEmail] consignment ${consignment?.id} không có consigner (pointer chưa được include?) — bỏ qua`
+      );
+      return;
+    }
+
+    // Fetch user với master key để đảm bảo lấy đủ tất cả field
+    // (include('consigner') chỉ trả public fields, có thể thiếu phoneNumber/identityNumber)
+    try {
+      await consigner.fetch({ useMasterKey: true });
+    } catch (fetchErr) {
+      console.error(
+        `[sendConfirmationEmail] fetch consigner ${consigner.id} lỗi:`,
+        fetchErr
       );
       return;
     }
