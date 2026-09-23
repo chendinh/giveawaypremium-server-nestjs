@@ -3,7 +3,7 @@ import { Consignment } from '../../models/consignment';
 import { Product } from '../../models/product';
 import { SubCategory } from '../../models/sub.category';
 import { getNextConsignmentSeq } from './counter';
-import { syncConsignmentStock } from '../function/consignment-sync';
+import { syncConsignmentStockInternal } from '../function/consignment-sync';
 
 const afterCreate = async (
   request: Parse.Cloud.AfterSaveRequest<Consignment>
@@ -49,9 +49,9 @@ const afterCreate = async (
   // dẫn đến numberOfPoducts/remainNumConsignment/numSoldConsignment bị lệch nhau.
   // Fix: sync lại 1 lần cuối cùng ở đây — sau khi TẤT CẢ product save đã resolve —
   // để đảm bảo giá trị ghi cuối cùng luôn được tính từ snapshot đầy đủ.
-  await syncConsignmentStock({
-    params: { consignmentId: consignment.id },
-  } as Parse.Cloud.FunctionRequest);
+  // Dùng bản internal (không check quyền) vì đây là lời gọi server-side nội bộ,
+  // không có request.user của client.
+  await syncConsignmentStockInternal({ consignmentId: consignment.id });
 
   // Email xác nhận ký gửi được gửi thủ công từ client sau khi tạo thành công
   // — không gửi tự động ở đây để tránh gửi 2 lần

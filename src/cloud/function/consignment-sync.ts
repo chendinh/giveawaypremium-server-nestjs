@@ -1,28 +1,27 @@
 import { Consignment } from '../../models/consignment';
 import { Product } from '../../models/product';
+import { requireAdminRole } from '../../common/require-admin';
 import sum = require('lodash/sum');
 
 /**
- * Re-sync aggregate fields (remainNumConsignment, numSoldConsignment, numberOfProducts, ...)
- * cho một hoặc nhiều Consignment từ Products thực tế trong DB.
+ * Logic thuần re-sync aggregate fields (remainNumConsignment, numSoldConsignment,
+ * numberOfProducts, ...) cho một hoặc nhiều Consignment từ Products thực tế trong DB.
  *
- * Dùng để sửa data cũ bị stale do race condition giữa product.afterSave
- * và order.afterSave cùng ghi consignment đồng thời.
+ * KHÔNG check quyền — chỉ dùng để gọi NỘI BỘ từ các trigger server-side
+ * (ví dụ Consignment.afterCreate) nơi không có `request.user` của client.
+ * Không export ra Cloud Function trực tiếp — dùng `syncConsignmentStock` bên dưới
+ * cho mọi lời gọi từ client.
  *
  * Params:
  *   - consignmentId (string): objectId của một Consignment cụ thể
  *   - groupId (string): objectId của ConsignmentGroup — sync toàn bộ đợt
  * Phải truyền ít nhất 1 trong 2.
- *
- * Yêu cầu: master key (admin only).
  */
-export const syncConsignmentStock = async (
-  request: Parse.Cloud.FunctionRequest
-): Promise<{ synced: number; errors: number }> => {
-  const { consignmentId, groupId } = request.params as {
-    consignmentId?: string;
-    groupId?: string;
-  };
+export const syncConsignmentStockInternal = async (params: {
+  consignmentId?: string;
+  groupId?: string;
+}): Promise<{ synced: number; errors: number }> => {
+  const { consignmentId, groupId } = params;
 
   let consignments: Consignment[] = [];
 
@@ -124,4 +123,24 @@ export const syncConsignmentStock = async (
   }
 
   return { synced, errors };
+};
+
+/**
+ * Cloud Function: syncConsignmentStock (client-facing)
+ *
+ * Yêu cầu: user đăng nhập với role === 'administrator' (xem requireAdminRole).
+ * Sau khi xác thực quyền, delegate cho `syncConsignmentStockInternal` để thực hiện
+ * logic re-sync thật (dùng `useMasterKey: true` nội bộ để bypass ACL khi đọc/ghi DB).
+ */
+export const syncConsignmentStock = async (
+  request: Parse.Cloud.FunctionRequest
+): Promise<{ synced: number; errors: number }> => {
+  await requireAdminRole(request.user);
+
+  const { consignmentId, groupId } = request.params as {
+    consignmentId?: string;
+    groupId?: string;
+  };
+
+  return syncConsignmentStockInternal({ consignmentId, groupId });
 };

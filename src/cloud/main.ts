@@ -202,6 +202,11 @@ Parse.Cloud.beforeSave(
   ConsignmentCloudValidate.beforeSave
 );
 Parse.Cloud.afterSave('Consignment', ConsignmentCloud.afterSave);
+// Các beforeDelete dưới đây KHÔNG phục vụ luồng nghiệp vụ nào hiện tại — hệ thống
+// chỉ dùng soft-delete (set deletedAt), không có nơi nào gọi hard .destroy().
+// Giữ requireMaster: true như lớp phòng thủ cuối cùng, tránh accidental hard-delete
+// qua REST API thường. Không đổi sang role-check vì Parse Dashboard/script nội bộ
+// dùng Master Key trực tiếp, không có request.user — đổi sẽ tự chặn luôn chính admin.
 Parse.Cloud.beforeDelete('Consignment', async request => {}, {
   requireMaster: true,
 });
@@ -213,7 +218,7 @@ Parse.Cloud.beforeDelete('Agency', async request => {}, {
 });
 // AppointmentSchedule — validate slot trước khi insert
 Parse.Cloud.beforeSave('AppointmentSchedule', AppointmentCloud.beforeSave);
-Parse.Cloud.beforeDelete('AppointmentSchedule', async _request => {}, {
+Parse.Cloud.beforeDelete('AppointmentSchedule', async request => {}, {
   requireMaster: true,
 });
 Parse.Cloud.beforeDelete('Category', async request => {}, {
@@ -396,9 +401,10 @@ Parse.Cloud.define('updateUserByAdmin', updateUserByAdmin, {
 });
 
 // Cloud Function: syncConsignmentStock — re-sync remainNumConsignment từ Products thực tế
-// Dùng để sửa data stale do race condition. Yêu cầu master key.
+// Dùng để sửa data stale do race condition.
+// Yêu cầu user đăng nhập với role administrator (check trong requireAdminRole).
 Parse.Cloud.define('syncConsignmentStock', syncConsignmentStock, {
-  requireMaster: true,
+  requireUser: true,
 });
 
 // ─── Khởi tạo ViettelPost token khi Parse Cloud load ──────────────────────────
