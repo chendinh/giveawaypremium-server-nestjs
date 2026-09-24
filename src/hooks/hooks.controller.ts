@@ -149,16 +149,16 @@ export class HooksController {
     try {
       const normalizedStatus = getStatusByService('viettelpost', ORDER_STATUS);
 
-      // Query Transporter theo ORDER_NUMBER lưu trong res.data.ORDER_NUMBER lúc tạo đơn
+      // Query Transporter theo ORDER_NUMBER lưu trong res.data.ORDER_NUMBER lúc tạo đơn.
+      // Dùng equalTo trực tiếp trên field lồng nhau thay vì findAll() + filter tay —
+      // findAll() là iteration API của Parse SDK, KHÔNG tương thích với sort/skip/limit
+      // ("Cannot iterate on a query with sort, skip, or limit") nên descending() trước đó
+      // luôn throw ngay từ dòng này, khiến toàn bộ webhook rơi vào catch và không bao giờ
+      // cập nhật được Transporter dù vẫn trả success:true giả cho VTP.
       const transporterQuery = new Parse.Query('Transporter');
       transporterQuery.equalTo('service', 'viettelpost');
-      const allVtpTransporters = await transporterQuery
-        .descending('createdAt')
-        .findAll({ useMasterKey: true });
-
-      const transporter = allVtpTransporters.find(
-        t => t.get('res')?.data?.ORDER_NUMBER === ORDER_NUMBER
-      );
+      transporterQuery.equalTo('res.data.ORDER_NUMBER', ORDER_NUMBER);
+      const transporter = await transporterQuery.first({ useMasterKey: true });
 
       if (!transporter) {
         // Đơn lạ — checklist VTP: ghi log và bypass
@@ -208,17 +208,9 @@ export class HooksController {
     } catch (error) {
       // Ghi log nhưng vẫn trả 200 — VTP không retry
       logger.error(`[VTP Webhook] Error processing ${ORDER_NUMBER}:`, error);
-      // DEBUG TẠM THỜI — trả chi tiết lỗi để QA điều tra, SẼ REVERT SAU
-      return res.status(200).json({
-        success: true,
-        _debug_error: error?.message || String(error),
-        _debug_stack: error?.stack,
-      });
     }
 
     // Luôn trả 200 theo yêu cầu tài liệu VTP
-    return res
-      .status(200)
-      .json({ success: true, _debug_no_error_reached_end: true });
+    return res.status(200).json({ success: true });
   }
 }
