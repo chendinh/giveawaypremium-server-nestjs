@@ -45,6 +45,12 @@ export class ParseModule implements OnModuleInit {
       javascriptKey: this.configService.get('JAVASCRIPT_KEY'),
       restAPIKey: this.configService.get('REST_API_KEY'),
       serverURL: this.configService.get('SERVER_URL'),
+      // Parse Server v7 default masterKeyIps chỉ cho phép 127.0.0.1 — trên container
+      // (DigitalOcean App Platform) client IP thực tế không khớp default này, khiến
+      // MỌI request dùng Master Key (kể cả từ Parse Dashboard hay admin script) bị
+      // "unauthorized" dù giá trị Master Key đúng. Mở rộng allowlist để Master Key
+      // hoạt động từ mọi IP — vẫn an toàn vì được bảo vệ bằng chính giá trị secret.
+      masterKeyIps: ['0.0.0.0/0', '::/0'],
       liveQuery: {
         classNames: ['Channel'],
       },
