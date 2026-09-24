@@ -208,9 +208,17 @@ export class HooksController {
     } catch (error) {
       // Ghi log nhưng vẫn trả 200 — VTP không retry
       logger.error(`[VTP Webhook] Error processing ${ORDER_NUMBER}:`, error);
+      // DEBUG TẠM THỜI — trả chi tiết lỗi để QA điều tra, SẼ REVERT SAU
+      return res.status(200).json({
+        success: true,
+        _debug_error: error?.message || String(error),
+        _debug_stack: error?.stack,
+      });
     }
 
     // Luôn trả 200 theo yêu cầu tài liệu VTP
-    return res.status(200).json({ success: true });
+    return res
+      .status(200)
+      .json({ success: true, _debug_no_error_reached_end: true });
   }
 }
