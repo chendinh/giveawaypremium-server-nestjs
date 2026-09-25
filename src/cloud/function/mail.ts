@@ -92,8 +92,9 @@ export function buildEmailData(consignment: Consignment): ConsignmentEmailData {
     0
   );
 
+  // productList lưu price/priceAfterFee ở đơn vị nghìn đồng (khớp logic FE) → x1000 để ra giá thật
   const formatPrice = (value: number | undefined | null): string => {
-    const num = Number(value) || 0;
+    const num = (Number(value) || 0) * 1000;
     return num > 0 ? `${num.toLocaleString('vi-VN')} vnd` : '0 vnd';
   };
 
