@@ -75,8 +75,12 @@ export function buildEmailData(consignment: Consignment): ConsignmentEmailData {
   // Dùng field consignmentId ("47-1126") thay vì Parse objectId
   const consignmentId =
     (consignment.get('consignmentId') as string) || consignment.id;
-  const bankName = (consignment.get('bankName') as string) ?? '';
-  const bankId = (consignment.get('bankId') as string) ?? '';
+  // Consignment không có field bankName/bankId riêng — thông tin ngân hàng
+  // nằm trong banks[0] (array), khớp với schema client gửi lên (setConsignment)
+  const consignmentBanks = consignment.get('banks') as
+    Array<{ type?: string; accNumber?: string }> | undefined;
+  const bankName = consignmentBanks?.[0]?.type ?? '';
+  const bankId = consignmentBanks?.[0]?.accNumber ?? '';
   const timeGetMoney = (consignment.get('timeGetMoney') as string) ?? '';
 
   const timeCheck = timeGetMoney
@@ -375,8 +379,10 @@ export const sendPaymentConfirmationEmail = async (
           await consigner.fetch({ useMasterKey: true });
           const productList = consignment.get('productList') ?? [];
           const dbMoneyBack = (consignment.get('moneyBack') as number) ?? 0;
-          const dbBankName = (consignment.get('bankName') as string) ?? '';
-          const dbBankId = (consignment.get('bankId') as string) ?? '';
+          const dbBanks = consignment.get('banks') as
+            Array<{ type?: string; accNumber?: string }> | undefined;
+          const dbBankName = dbBanks?.[0]?.type ?? '';
+          const dbBankId = dbBanks?.[0]?.accNumber ?? '';
 
           await sendPaymentEmail(
             consigner,
@@ -441,8 +447,10 @@ export const sendPaymentConfirmationEmail = async (
     }
 
     const dbMoneyBack = (consignment.get('moneyBack') as number) ?? 0;
-    const dbBankName = (consignment.get('bankName') as string) ?? '';
-    const dbBankId = (consignment.get('bankId') as string) ?? '';
+    const dbBanks = consignment.get('banks') as
+      Array<{ type?: string; accNumber?: string }> | undefined;
+    const dbBankName = dbBanks?.[0]?.type ?? '';
+    const dbBankId = dbBanks?.[0]?.accNumber ?? '';
     const productList = consignment.get('productList') ?? [];
 
     finalData = {
