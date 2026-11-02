@@ -1,0 +1,34 @@
+{
+  "phoneNumber": "0900000098",
+  "fullName": "QA Test Buyer 2",
+  "consignerIdCard": "",
+  "clientInfo": { "phoneNumber": "0900000098", "fullName": "QA Test Buyer 2" },
+  "consignee": {
+    "__type": "Pointer",
+    "className": "_User",
+    "objectId": "oxs4bxNJ7X"
+  },
+  "client": {
+    "__type": "Pointer",
+    "className": "_User",
+    "objectId": "oxs4bxNJ7X"
+  },
+  "isTransferMoneyWithBank": false,
+  "isTransferMoneyWithBankAndOffline": false,
+  "transferBankMoneyAmount": 0,
+  "transferOfflineMoneyAmount": 0,
+  "productList": [
+    {
+      "objectId": "9rjAPqFYDj",
+      "count": 1,
+      "name": "[TEST] Tui D",
+      "price": 500
+    }
+  ],
+  "totalNumberOfProductForSale": "1",
+  "totalMoneyForSale": "500",
+  "totalMoneyForSaleAfterFee": "0",
+  "note": "QA TEST ORDER 2 - se bi huy - vui long xoa",
+  "isOnlineSale": false,
+  "isGetMoney": false
+}

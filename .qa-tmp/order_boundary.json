@@ -1,0 +1,61 @@
+{
+  "phoneNumber": "0900000097",
+  "fullName": "QA Test Buyer Boundary",
+  "consignerIdCard": "",
+  "clientInfo": {
+    "phoneNumber": "0900000097",
+    "fullName": "QA Test Buyer Boundary"
+  },
+  "consignee": {
+    "__type": "Pointer",
+    "className": "_User",
+    "objectId": "oxs4bxNJ7X"
+  },
+  "client": {
+    "__type": "Pointer",
+    "className": "_User",
+    "objectId": "oxs4bxNJ7X"
+  },
+  "isTransferMoneyWithBank": false,
+  "isTransferMoneyWithBankAndOffline": false,
+  "transferBankMoneyAmount": 0,
+  "transferOfflineMoneyAmount": 0,
+  "productList": [
+    {
+      "objectId": "Q18kPb9xFv",
+      "count": 1,
+      "name": "[TEST] Price 0",
+      "price": 0
+    },
+    {
+      "objectId": "FUeQvnnq3c",
+      "count": 1,
+      "name": "[TEST] Price 999",
+      "price": 999
+    },
+    {
+      "objectId": "6pgr5dKec8",
+      "count": 1,
+      "name": "[TEST] Price 1000",
+      "price": 1000
+    },
+    {
+      "objectId": "eaPJvDBBmN",
+      "count": 1,
+      "name": "[TEST] Price 10000",
+      "price": 10000
+    },
+    {
+      "objectId": "DkXu6e23uG",
+      "count": 1,
+      "name": "[TEST] Price 10001",
+      "price": 10001
+    }
+  ],
+  "totalNumberOfProductForSale": "5",
+  "totalMoneyForSale": "22000",
+  "totalMoneyForSaleAfterFee": "0",
+  "note": "QA TEST BOUNDARY ORDER - vui long xoa",
+  "isOnlineSale": false,
+  "isGetMoney": false
+}

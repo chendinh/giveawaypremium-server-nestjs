@@ -1,0 +1,29 @@
+{
+  "service": "viettelpost",
+  "action": "CREATE_ORDER",
+  "data": {
+    "orderId": "fMpqhgTbqx",
+    "from": {
+      "province": 2,
+      "district": 43,
+      "ward": 773,
+      "address": "1 Pho Duc Chinh, Q1, HCM",
+      "name": "Giveaway Premium Store",
+      "phone": "0703334443"
+    },
+    "to": {
+      "province": 2,
+      "district": 43,
+      "ward": 773,
+      "address": "1 Pho Duc Chinh, Q1, HCM - QA TEST WEBHOOK",
+      "name": "QA WEBHOOK TEST",
+      "phone": "0900000090"
+    },
+    "value": 0,
+    "serviceLevel": "VCN",
+    "note": "QA TEST WEBHOOK - HUY SAU KHI TEST XONG",
+    "codMoney": 0,
+    "isFreeShipping": false,
+    "items": [{ "name": "QA TEST ITEM WEBHOOK", "weight": 500, "quantity": 1 }]
+  }
+}

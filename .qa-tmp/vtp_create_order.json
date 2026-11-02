@@ -1,0 +1,29 @@
+{
+  "service": "viettelpost",
+  "action": "CREATE_ORDER",
+  "data": {
+    "orderId": "vE9LMPVYML",
+    "from": {
+      "province": 2,
+      "district": 43,
+      "ward": 773,
+      "address": "1 Pho Duc Chinh, Q1, HCM",
+      "name": "Giveaway Premium Store",
+      "phone": "0703334443"
+    },
+    "to": {
+      "province": 2,
+      "district": 43,
+      "ward": 773,
+      "address": "1 Pho Duc Chinh, Q1, HCM - QA TEST DO NOT SHIP",
+      "name": "QA TEST",
+      "phone": "0900000099"
+    },
+    "value": 0,
+    "serviceLevel": "VCN",
+    "note": "QA TEST - HUY NGAY - KHONG GIAO",
+    "codMoney": 0,
+    "isFreeShipping": false,
+    "items": [{ "name": "QA TEST ITEM", "weight": 500, "quantity": 1 }]
+  }
+}

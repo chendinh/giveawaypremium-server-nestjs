@@ -37,6 +37,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# local scratch / generated reports (có thể chứa thông tin cá nhân khách hàng)
+/tmp/
+
 # local env files
 .env*.local
 .env
@@ -51,3 +54,4 @@ public/build-info.json
 
 #lock
 pnpm-lock.yaml
+package-lock.json

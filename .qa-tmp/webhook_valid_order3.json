@@ -1,0 +1,33 @@
+{
+  "DATA": {
+    "ORDER_NUMBER": "153012777444",
+    "ORDER_REFERENCE": "",
+    "ORDER_STATUSDATE": "24/09/2026 14:45:00",
+    "ORDER_STATUS": 103,
+    "STATUS_NAME": "Giao buu cuc",
+    "LOCALION_CURRENTLY": "",
+    "LOCATION_CURRENTLY": "",
+    "NOTE": "",
+    "MONEY_COLLECTION": 0,
+    "MONEY_FEECOD": 0,
+    "MONEY_TOTALFEE": 0,
+    "MONEY_TOTAL": 0,
+    "MONEY_TOTALVAT": 0,
+    "EXPECTED_DELIVERY": "",
+    "PRODUCT_WEIGHT": 500,
+    "ORDER_SERVICE": "VCN",
+    "ORDER_SERVICE_ADD": null,
+    "ORDER_PAYMENT": 4,
+    "EXPECTED_DELIVERY_DATE": null,
+    "DETAIL": [],
+    "VOUCHER_VALUE": 0,
+    "MONEY_COLLECTION_ORIGIN": null,
+    "EMPLOYEE_NAME": "",
+    "EMPLOYEE_PHONE": "",
+    "IS_RETURNING": false,
+    "POD": { "IMAGES": [] },
+    "REASON_CODE": null,
+    "RECEIVER_FULLNAME": "QA WEBHOOK RETEST"
+  },
+  "TOKEN": "GP_VTP_2026_SECRET_GA_PREMIUM"
+}

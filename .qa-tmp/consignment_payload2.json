@@ -1,0 +1,92 @@
+{
+  "consignmentId": "TESTQA2-PENDING",
+  "consignerName": "QA Test Consigner",
+  "consignerIdCard": "TESTID001",
+  "mail": "qa_test@example.com",
+  "consigner": {
+    "__type": "Pointer",
+    "className": "_User",
+    "objectId": "NMTI3XmVSl"
+  },
+  "consignee": {
+    "__type": "Pointer",
+    "className": "_User",
+    "objectId": "oxs4bxNJ7X"
+  },
+  "group": {
+    "__type": "Pointer",
+    "className": "ConsignmentGroup",
+    "objectId": "4AQUL27T3V"
+  },
+  "consigneeName": "admin_khang",
+  "phoneNumber": "0900000001",
+  "numberOfProducts": 6,
+  "timeGetMoney": "23-09-2026",
+  "moneyBackForFullSold": 0,
+  "totalMoney": 0,
+  "banks": [{ "type": "Test Bank", "accNumber": "000000" }],
+  "note": "QA TEST BOUNDARY PRICE - vui long xoa",
+  "isTransferMoneyWithBank": false,
+  "productList": [
+    {
+      "key": 0,
+      "name": "[TEST] Price 0",
+      "count": 1,
+      "price": 0,
+      "priceAfterFee": 0,
+      "categoryId": "0paqD5jvw3",
+      "note": "---",
+      "code": "TQ2-1"
+    },
+    {
+      "key": 1,
+      "name": "[TEST] Price 999",
+      "count": 1,
+      "price": 999,
+      "priceAfterFee": 739,
+      "categoryId": "0paqD5jvw3",
+      "note": "---",
+      "code": "TQ2-2"
+    },
+    {
+      "key": 2,
+      "name": "[TEST] Price 1000",
+      "count": 1,
+      "price": 1000,
+      "priceAfterFee": 770,
+      "categoryId": "0paqD5jvw3",
+      "note": "---",
+      "code": "TQ2-3"
+    },
+    {
+      "key": 3,
+      "name": "[TEST] Price 10000",
+      "count": 1,
+      "price": 10000,
+      "priceAfterFee": 7700,
+      "categoryId": "0paqD5jvw3",
+      "note": "---",
+      "code": "TQ2-4"
+    },
+    {
+      "key": 4,
+      "name": "[TEST] Price 10001",
+      "count": 1,
+      "price": 10001,
+      "priceAfterFee": 8000,
+      "categoryId": "0paqD5jvw3",
+      "note": "---",
+      "code": "TQ2-5"
+    },
+    {
+      "key": 5,
+      "name": "[TEST] Race Product",
+      "count": 10,
+      "price": 100,
+      "priceAfterFee": 74,
+      "categoryId": "0paqD5jvw3",
+      "note": "---",
+      "code": "TQ2-6"
+    }
+  ]
+}

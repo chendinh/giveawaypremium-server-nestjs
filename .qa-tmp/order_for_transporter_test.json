@@ -1,0 +1,30 @@
+{
+  "phoneNumber": "0900000096",
+  "fullName": "QA Transporter Test",
+  "consignerIdCard": "",
+  "clientInfo": {
+    "phoneNumber": "0900000096",
+    "fullName": "QA Transporter Test"
+  },
+  "consignee": {
+    "__type": "Pointer",
+    "className": "_User",
+    "objectId": "oxs4bxNJ7X"
+  },
+  "client": {
+    "__type": "Pointer",
+    "className": "_User",
+    "objectId": "oxs4bxNJ7X"
+  },
+  "isTransferMoneyWithBank": false,
+  "isTransferMoneyWithBankAndOffline": false,
+  "transferBankMoneyAmount": 0,
+  "transferOfflineMoneyAmount": 0,
+  "productList": [],
+  "totalNumberOfProductForSale": "0",
+  "totalMoneyForSale": "0",
+  "totalMoneyForSaleAfterFee": "0",
+  "note": "QA TEST - soft delete voi transporter active - vui long xoa",
+  "isOnlineSale": false,
+  "isGetMoney": false
+}

@@ -1,0 +1,34 @@
+{
+  "phoneNumber": "0900000092",
+  "fullName": "QA Race 2",
+  "consignerIdCard": "",
+  "clientInfo": { "phoneNumber": "0900000092", "fullName": "QA Race 2" },
+  "consignee": {
+    "__type": "Pointer",
+    "className": "_User",
+    "objectId": "oxs4bxNJ7X"
+  },
+  "client": {
+    "__type": "Pointer",
+    "className": "_User",
+    "objectId": "oxs4bxNJ7X"
+  },
+  "isTransferMoneyWithBank": false,
+  "isTransferMoneyWithBankAndOffline": false,
+  "transferBankMoneyAmount": 0,
+  "transferOfflineMoneyAmount": 0,
+  "productList": [
+    {
+      "objectId": "36RElwzxJy",
+      "count": 2,
+      "name": "[TEST] Race Product",
+      "price": 100
+    }
+  ],
+  "totalNumberOfProductForSale": "2",
+  "totalMoneyForSale": "200",
+  "totalMoneyForSaleAfterFee": "0",
+  "note": "QA RACE TEST 2",
+  "isOnlineSale": false,
+  "isGetMoney": false
+}

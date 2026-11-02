@@ -1,0 +1,31 @@
+{
+  "service": "viettelpost",
+  "action": "CREATE_ORDER",
+  "data": {
+    "orderId": "SJAR8MmOsP",
+    "from": {
+      "province": 2,
+      "district": 43,
+      "ward": 773,
+      "address": "1 Pho Duc Chinh, Q1, HCM",
+      "name": "Giveaway Premium Store",
+      "phone": "0703334443"
+    },
+    "to": {
+      "province": 2,
+      "district": 43,
+      "ward": 773,
+      "address": "1 Pho Duc Chinh, Q1, HCM - QA WEBHOOK RETEST",
+      "name": "QA WEBHOOK RETEST",
+      "phone": "0900000089"
+    },
+    "value": 0,
+    "serviceLevel": "VCN",
+    "note": "QA_WEBHOOK_RETEST_DO_NOT_TOUCH",
+    "codMoney": 0,
+    "isFreeShipping": false,
+    "items": [
+      { "name": "QA TEST ITEM WEBHOOK RETEST", "weight": 500, "quantity": 1 }
+    ]
+  }
+}

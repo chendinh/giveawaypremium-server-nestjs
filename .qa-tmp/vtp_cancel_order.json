@@ -1,0 +1,7 @@
+{
+  "service": "viettelpost",
+  "action": "CANCEL_ORDER",
+  "data": {
+    "orderId": "vE9LMPVYML"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "service": "viettelpost",
+  "action": "GET_ORDER_STATUS",
+  "data": {
+    "orderId": "fMpqhgTbqx"
+  }
+}

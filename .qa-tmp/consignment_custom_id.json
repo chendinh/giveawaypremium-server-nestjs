@@ -1,0 +1,53 @@
+{
+  "consignmentId": "th1-1126-QATEST",
+  "isCustomId": true,
+  "consignerName": "QA Test Consigner",
+  "consignerIdCard": "TESTID001",
+  "mail": "qa_test@example.com",
+  "consigner": {
+    "__type": "Pointer",
+    "className": "_User",
+    "objectId": "NMTI3XmVSl"
+  },
+  "consignee": {
+    "__type": "Pointer",
+    "className": "_User",
+    "objectId": "oxs4bxNJ7X"
+  },
+  "group": {
+    "__type": "Pointer",
+    "className": "ConsignmentGroup",
+    "objectId": "4AQUL27T3V"
+  },
+  "consigneeName": "admin_khang",
+  "phoneNumber": "0900000001",
+  "numberOfProducts": 2,
+  "timeGetMoney": "23-09-2026",
+  "moneyBackForFullSold": 0,
+  "totalMoney": 0,
+  "banks": [{ "type": "Test Bank", "accNumber": "000000" }],
+  "note": "QA TEST CUSTOM ID - vui long xoa",
+  "isTransferMoneyWithBank": false,
+  "productList": [
+    {
+      "key": 0,
+      "name": "[TEST] Custom F",
+      "count": 1,
+      "price": 150,
+      "priceAfterFee": 111,
+      "categoryId": "0paqD5jvw3",
+      "note": "---",
+      "code": "placeholder-1"
+    },
+    {
+      "key": 1,
+      "name": "[TEST] Custom G",
+      "count": 1,
+      "price": 250,
+      "priceAfterFee": 185,
+      "categoryId": "0paqD5jvw3",
+      "note": "---",
+      "code": "placeholder-2"
+    }
+  ]
+}

@@ -55,6 +55,20 @@ interface RawProduct {
   moneyBackProduct?: number;
 }
 
+/**
+ * QUY ƯỚC ĐƠN VỊ TIỀN: mọi số tiền lưu trong DB (price, priceAfterFee,
+ * moneyBack, ...) và số nhân viên nhập trên admin đều tính theo NGHÌN ĐỒNG
+ * (100 = 100.000đ) cho nhập nhanh. Số tiền hiển thị cho khách trong email phải
+ * đi qua hàm này để nhân ×1000 trở lại. Làm tròn về đồng nguyên, khớp
+ * formatVND ở màn hình admin.
+ */
+const formatThousandsAsVnd = (
+  valueInThousands: number | undefined | null
+): string => {
+  const vnd = Math.round((Number(valueInThousands) || 0) * 1000);
+  return vnd > 0 ? `${vnd.toLocaleString('vi-VN')} vnd` : '0 vnd';
+};
+
 export function buildEmailData(consignment: Consignment): ConsignmentEmailData {
   const consigner = consignment.getConsigner();
 
@@ -78,7 +92,8 @@ export function buildEmailData(consignment: Consignment): ConsignmentEmailData {
   // Consignment không có field bankName/bankId riêng — thông tin ngân hàng
   // nằm trong banks[0] (array), khớp với schema client gửi lên (setConsignment)
   const consignmentBanks = consignment.get('banks') as
-    Array<{ type?: string; accNumber?: string }> | undefined;
+    | Array<{ type?: string; accNumber?: string }>
+    | undefined;
   const bankName = consignmentBanks?.[0]?.type ?? '';
   const bankId = consignmentBanks?.[0]?.accNumber ?? '';
   const timeGetMoney = (consignment.get('timeGetMoney') as string) ?? '';
@@ -96,18 +111,13 @@ export function buildEmailData(consignment: Consignment): ConsignmentEmailData {
     0
   );
 
-  // productList lưu price/priceAfterFee ở đơn vị nghìn đồng (khớp logic FE) → x1000 để ra giá thật
-  const formatPrice = (value: number | undefined | null): string => {
-    const num = (Number(value) || 0) * 1000;
-    return num > 0 ? `${num.toLocaleString('vi-VN')} vnd` : '0 vnd';
-  };
-
+  // productList lưu price/priceAfterFee theo nghìn đồng → formatThousandsAsVnd ×1000 để ra giá thật
   const products: ProductEmailItem[] = productList.map(rawProduct => ({
     name: rawProduct.name,
     amount: rawProduct.count,
     status: rawProduct.rateNew ?? '',
-    price: formatPrice(rawProduct.price),
-    priceAfterFee: formatPrice(rawProduct.priceAfterFee),
+    price: formatThousandsAsVnd(rawProduct.price),
+    priceAfterFee: formatThousandsAsVnd(rawProduct.priceAfterFee),
   }));
 
   return {
@@ -341,6 +351,9 @@ export const sendPaymentConfirmationEmail = async (
   }>
 ): Promise<{ success: boolean }> => {
   const {
+    // ⚠ Đây là Parse objectId (client gửi item.objectId), KHÔNG phải mã ký gửi
+    // hiển thị trên mail. Chỉ dùng để query/log; mã hiển thị và số lượng lấy
+    // từ DB qua buildEmailData(consignment).
     consignmentId,
     customerName,
     phoneNumber,
@@ -351,254 +364,92 @@ export const sendPaymentConfirmationEmail = async (
     note,
   } = request.params;
 
-  // FE đã gửi đầy đủ data — chỉ cần dùng giá trị đó
-  // Nếu FE không gửi (lỗi fallback), query lại từ DB
-  // Kiểm tra bất kỳ field nào bị thiếu rỗng để trigger fallback
-  const isDataIncomplete =
-    !customerName ||
-    !phoneNumber ||
-    !bankName ||
-    !bankId ||
-    moneyBack === undefined ||
-    moneyBack === 0;
+  // Luôn đọc DB: cần consigner (lấy email) và là nguồn dự phòng cho mọi field
+  // FE gửi thiếu/rỗng
+  const consignment = await new Parse.Query(Consignment)
+    .equalTo('objectId', consignmentId)
+    .include('consigner')
+    .first({ useMasterKey: true });
 
-  if (isDataIncomplete) {
-    console.log(
-      `[sendPaymentConfirmationEmail] FE không gửi đủ data (${isDataIncomplete}), query lại từ DB...`
-    );
-    const query = new Parse.Query(Consignment);
-    const consignment = await query
-      .equalTo('objectId', consignmentId)
-      .include('consigner')
-      .first({ useMasterKey: true });
-
-    if (consignment) {
-      const consigner = consignment.getConsigner();
-      if (consigner) {
-        try {
-          await consigner.fetch({ useMasterKey: true });
-          const productList = consignment.get('productList') ?? [];
-          const dbMoneyBack = (consignment.get('moneyBack') as number) ?? 0;
-          const dbBanks = consignment.get('banks') as
-            Array<{ type?: string; accNumber?: string }> | undefined;
-          const dbBankName = dbBanks?.[0]?.type ?? '';
-          const dbBankId = dbBanks?.[0]?.accNumber ?? '';
-
-          await sendPaymentEmail(
-            consigner,
-            consignmentId,
-            productList.length,
-            dbMoneyBack,
-            dbBankName,
-            dbBankId,
-            customerName ?? '',
-            phoneNumber ?? '',
-            identityId ?? '',
-            note ?? ''
-          );
-        } catch (err) {
-          console.error(`[sendPaymentConfirmationEmail] fetch User lỗi:`, err);
-        }
-      }
-    } else {
-      console.error(
-        `[sendPaymentConfirmationEmail] Consignment ${consignmentId} không tồn tại`
-      );
-    }
-    return { success: true };
-  }
-
-  // Dùng data từ FE, nhưng query từ DB nếu thiếu bankName/bankId/moneyBack
-  let finalData: PaymentEmailData;
-  let finalConsigner: Parse.User;
-
-  // Kiểm tra nếu cần data từ DB (bankName, bankId, moneyBack có thể rỗng từ FE)
-  const needsDBData =
-    !bankName || !bankId || moneyBack === undefined || moneyBack === 0;
-
-  if (needsDBData) {
-    console.log(
-      `[sendPaymentConfirmationEmail] bankName/bankId/moneyBack thiếu từ FE, query từ DB...`
-    );
-    const query = new Parse.Query(Consignment);
-    const consignment = await query
-      .equalTo('objectId', consignmentId)
-      .include('consigner')
-      .first({ useMasterKey: true });
-
-    if (!consignment) {
-      console.error(`[sendPaymentConfirmationEmail] Consignment không tồn tại`);
-      return { success: true };
-    }
-
-    const consigner = consignment.getConsigner();
-    if (!consigner) {
-      console.error(
-        `[sendPaymentConfirmationEmail] consignment ${consignmentId} không có consigner`
-      );
-      return { success: true };
-    }
-
-    try {
-      await consigner.fetch({ useMasterKey: true });
-    } catch (err) {
-      console.error(`[sendPaymentConfirmationEmail] fetch User lỗi:`, err);
-      return { success: true };
-    }
-
-    const dbMoneyBack = (consignment.get('moneyBack') as number) ?? 0;
-    const dbBanks = consignment.get('banks') as
-      Array<{ type?: string; accNumber?: string }> | undefined;
-    const dbBankName = dbBanks?.[0]?.type ?? '';
-    const dbBankId = dbBanks?.[0]?.accNumber ?? '';
-    const productList = consignment.get('productList') ?? [];
-
-    finalData = {
-      customerName: customerName ?? '',
-      phoneNumber: phoneNumber ?? '',
-      identityId: identityId ?? '',
-      consignmentId,
-      numberOfProduct: productList.length,
-      bankName: dbBankName,
-      bankId: dbBankId,
-      moneyBack:
-        dbMoneyBack > 0
-          ? `${dbMoneyBack.toLocaleString('vi-VN')} vnd`
-          : '0 vnd',
-      note: note ?? '---',
-    };
-
-    finalConsigner = consigner;
-  } else {
-    // Dùng data từ FE
-    finalData = {
-      customerName: customerName ?? '',
-      phoneNumber: phoneNumber ?? '',
-      identityId: identityId ?? '',
-      consignmentId,
-      numberOfProduct: 1, // fallback
-      bankName: bankName ?? '',
-      bankId: bankId ?? '',
-      moneyBack:
-        (moneyBack ?? 0) > 0
-          ? `${((moneyBack ?? 0) * 1000).toLocaleString('vi-VN')} vnd`
-          : '0 vnd',
-      note: note ?? '---',
-    };
-
-    // Query consigner để lấy email
-    const query = new Parse.Query(Consignment);
-    const consignment = await query
-      .equalTo('objectId', consignmentId)
-      .include('consigner')
-      .first({ useMasterKey: true });
-
-    if (!consignment) {
-      console.error(`[sendPaymentConfirmationEmail] Consignment không tồn tại`);
-      return { success: true };
-    }
-
-    finalConsigner = consignment.getConsigner();
-    if (!finalConsigner) {
-      console.error(
-        `[sendPaymentConfirmationEmail] consignment ${consignmentId} không có consigner`
-      );
-      return { success: true };
-    }
-
-    try {
-      await finalConsigner.fetch({ useMasterKey: true });
-    } catch (err) {
-      console.error(`[sendPaymentConfirmationEmail] fetch User lỗi:`, err);
-      return { success: true };
-    }
-  }
-
-  console.log(
-    `[sendPaymentConfirmationEmail] consignment ${consignmentId} → finalData:`,
-    JSON.stringify(finalData, null, 2)
-  );
-
-  const email =
-    (finalConsigner.get('email') as string) ||
-    (finalConsigner.get('mail') as string);
-  if (!email) {
+  if (!consignment) {
     console.error(
-      `[sendPaymentConfirmationEmail] consigner ${finalConsigner.id} không có email`
+      `[sendPaymentConfirmationEmail] Consignment ${consignmentId} không tồn tại`
     );
     return { success: true };
   }
 
-  // Truyền raw number thẳng vào sendPaymentEmail — tránh strip/format rồi format lại
-  const rawMoneyBackValue = !needsDBData
-    ? (moneyBack ?? 0) * 1000 // FE gửi đơn vị nghìn → nhân 1000
-    : ((finalData as any)._rawMoneyBack ?? 0);
-
-  await sendPaymentEmail(
-    finalConsigner,
-    consignmentId,
-    finalData.numberOfProduct,
-    rawMoneyBackValue,
-    finalData.bankName,
-    finalData.bankId,
-    finalData.customerName,
-    finalData.phoneNumber,
-    finalData.identityId,
-    finalData.note
-  );
-  return { success: true };
-};
-
-// Helper để send email với data đã được chuẩn bị
-const sendPaymentEmail = async (
-  consigner: Parse.User,
-  consignmentId: string,
-  numberOfProduct: number,
-  moneyBack: number,
-  bankName: string,
-  bankId: string,
-  customerName: string,
-  phoneNumber: string,
-  identityId: string,
-  note: string
-): Promise<void> => {
-  const rawMoneyBack = moneyBack;
-
-  const data: PaymentEmailData = {
-    customerName,
-    phoneNumber,
-    identityId,
-    consignmentId,
-    numberOfProduct,
-    bankName,
-    bankId,
-    moneyBack:
-      rawMoneyBack > 0
-        ? `${rawMoneyBack.toLocaleString('vi-VN')} vnd`
-        : '0 vnd',
-    note: note || '---',
-  };
-
-  const email =
-    (consigner.get('email') as string) || (consigner.get('mail') as string);
-
-  if (!email) {
+  const consigner = consignment.getConsigner();
+  if (!consigner) {
     console.error(
-      `[sendPaymentEmail] consigner ${consigner.id} không có email`
+      `[sendPaymentConfirmationEmail] consignment ${consignmentId} không có consigner`
     );
-    return;
+    return { success: true };
   }
 
   try {
+    // Một số field của User (phoneNumber, identityNumber, email) chỉ đọc được
+    // sau khi fetch với master key
+    await consigner.fetch({ useMasterKey: true });
+  } catch (err) {
+    console.error(`[sendPaymentConfirmationEmail] fetch User lỗi:`, err);
+    return { success: true };
+  }
+
+  const email =
+    (consigner.get('email') as string) || (consigner.get('mail') as string);
+  if (!email) {
+    console.error(
+      `[sendPaymentConfirmationEmail] consigner ${consigner.id} không có email`
+    );
+    return { success: true };
+  }
+
+  // Dữ liệu từ DB, cùng nguồn với mail biên nhận ký gửi: mã ký gửi hiển thị,
+  // tổng số lượng, thông tin khách, ngân hàng
+  const dbData = buildEmailData(consignment);
+
+  // Ưu tiên giá trị FE gửi lên (số nhân viên đang thấy trên màn hình); thiếu
+  // hoặc rỗng thì lấy DB. Riêng mã ký gửi và số lượng luôn lấy từ DB.
+  // moneyBack của FE lẫn DB đều tính theo nghìn đồng → formatThousandsAsVnd ×1000.
+  const feMoneyBack = Number(moneyBack) || 0;
+  const data: PaymentEmailData = {
+    customerName: customerName || dbData.customerName,
+    phoneNumber: phoneNumber || dbData.phoneNumber,
+    identityId: identityId || dbData.identityId,
+    consignmentId: dbData.consignmentId,
+    numberOfProduct: dbData.numberOfProduct,
+    bankName: bankName || dbData.bankName,
+    bankId: bankId || dbData.bankId,
+    moneyBack: formatThousandsAsVnd(
+      feMoneyBack > 0 ? feMoneyBack : (consignment.get('moneyBack') as number)
+    ),
+    note: note || '---',
+  };
+
+  console.log(
+    `[sendPaymentConfirmationEmail] consignment ${consignmentId} → data:`,
+    JSON.stringify(data, null, 2)
+  );
+
+  await sendPaymentEmail(email, data);
+  return { success: true };
+};
+
+// Render payment.ejs rồi gửi. Lỗi render/gửi chỉ log, không throw (fire-and-forget)
+const sendPaymentEmail = async (
+  mailTo: string,
+  data: PaymentEmailData
+): Promise<void> => {
+  try {
     const html = await ejs.renderFile(EMAIL_PATHS[EMAIL_TYPES.PAYMENT], data);
     await emailFactory.send({
-      mailTo: email,
+      mailTo,
       title: 'Xác nhận chuyển khoản',
       html,
     });
   } catch (error) {
     console.error(
-      `[sendPaymentEmail] Lỗi gửi email consignment ${consignmentId}:`,
+      `[sendPaymentEmail] Lỗi gửi email consignment ${data.consignmentId}:`,
       error
     );
   }

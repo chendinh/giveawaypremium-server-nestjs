@@ -1,0 +1,82 @@
+{
+  "consignmentId": "TESTQA-PENDING",
+  "consignerName": "QA Test Consigner",
+  "consignerIdCard": "TESTID001",
+  "mail": "qa_test@example.com",
+  "consigner": {
+    "__type": "Pointer",
+    "className": "_User",
+    "objectId": "NMTI3XmVSl"
+  },
+  "consignee": {
+    "__type": "Pointer",
+    "className": "_User",
+    "objectId": "oxs4bxNJ7X"
+  },
+  "group": {
+    "__type": "Pointer",
+    "className": "ConsignmentGroup",
+    "objectId": "LSySgIyFtB"
+  },
+  "consigneeName": "admin_khang",
+  "phoneNumber": "0900000001",
+  "numberOfProducts": 8,
+  "timeGetMoney": "23-09-2026",
+  "moneyBackForFullSold": 0,
+  "totalMoney": 0,
+  "banks": [{ "type": "Test Bank", "accNumber": "000000" }],
+  "note": "QA TEST - vui long xoa",
+  "isTransferMoneyWithBank": false,
+  "productList": [
+    {
+      "key": 0,
+      "name": "[TEST] Ao thun A",
+      "count": 2,
+      "price": 100,
+      "priceAfterFee": 74,
+      "categoryId": "0paqD5jvw3",
+      "note": "---",
+      "code": "TESTQA-1"
+    },
+    {
+      "key": 1,
+      "name": "[TEST] Ao thun B",
+      "count": 1,
+      "price": 200,
+      "priceAfterFee": 154,
+      "categoryId": "0paqD5jvw3",
+      "note": "---",
+      "code": "TESTQA-2"
+    },
+    {
+      "key": 2,
+      "name": "[TEST] Vay C",
+      "count": 3,
+      "price": 300,
+      "priceAfterFee": 231,
+      "categoryId": "0paqD5jvw3",
+      "note": "---",
+      "code": "TESTQA-3"
+    },
+    {
+      "key": 3,
+      "name": "[TEST] Tui D",
+      "count": 1,
+      "price": 500,
+      "priceAfterFee": 400,
+      "categoryId": "dNYERCGnBT",
+      "note": "---",
+      "code": "TESTQA-4"
+    },
+    {
+      "key": 4,
+      "name": "[TEST] Giay E",
+      "count": 1,
+      "price": 800,
+      "priceAfterFee": 640,
+      "categoryId": "PtUHtoonRc",
+      "note": "---",
+      "code": "TESTQA-5"
+    }
+  ]
+}

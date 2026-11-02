@@ -1,0 +1,12 @@
+{
+  "service": "viettelpost",
+  "action": "PRICE_ESTIMATE",
+  "data": {
+    "weight": 500,
+    "serviceLevel": "VCN",
+    "from": {"province": 2, "district": 43, "ward": 773, "address": "1 Pho Duc Chinh, Q1, HCM"},
+    "to": {"province": 2, "district": 44, "ward": 787, "address": "QA test address"},
+    "transport": "road",
+    "value": 0
+  }
+}

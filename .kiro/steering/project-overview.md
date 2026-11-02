@@ -76,3 +76,11 @@ NHANH_APP_ID=
 - **Master key:** Use `{ useMasterKey: true }` for server-side saves that bypass ACL
 - **Queue pattern:** `p-queue` used for OrderRequest status updates to avoid race conditions
 - **Logging:** Use Winston logger from `src/plugins/logger.ts`, logs to `logs/` directory
+
+## Money Unit Convention
+
+Quy ước nội bộ, không có trong schema hay API: các trường tiền của ký gửi, sản phẩm và đơn hàng trong DB, cùng số nhân viên nhập trên admin, đều tính theo **nghìn đồng** (`100` = 100.000đ) để nhập cho nhanh. Khách phải thấy số đã nhân ×1000 trở lại.
+
+- **Lưu và nhập liệu:** giữ nguyên đơn vị nghìn đồng, không nhân ×1000 khi lưu. Ví dụ: `price`, `priceAfterFee`, `moneyBackProduct` (Product), `moneyBack` (Consignment), `totalMoneyForSale`, `transferBankMoneyAmount`, `transferOfflineMoneyAmount` (Order). Với trường tiền khác, kiểm tra đơn vị trước khi dùng.
+- **Hiển thị:** nhân ×1000 trước khi đưa cho khách hoặc hiện trong bảng và báo cáo. Trong email, mọi số tiền đi qua `formatThousandsAsVnd()` ở `src/cloud/function/mail.ts` (nhân ×1000, làm tròn về đồng nguyên). Hàm này chưa `export`, hiện chỉ dùng trong file đó.
+- **Gửi sang hệ thống ngoài:** kiểm tra đơn vị bên nhận. Ví dụ đã có: client nhân ×1000 giá trị đơn hàng trước khi gửi `value` sang ViettelPost.
