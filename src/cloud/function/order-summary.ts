@@ -89,6 +89,12 @@ export const getOrderSummary = async (
     const productCount = Number(order.get('totalNumberOfProductForSale')) || 0;
     // Đơn có transporter (vận đơn VTP/GHTK) → luôn là online dù isOnlineSale bị thiếu (đơn cũ)
     // Dùng include('transporter') để pointer được fetch đúng, tránh stub luôn truthy
+    //
+    // Đơn "khách tự đến lấy tại shop" (shippingInfo.pickupType = 'self', xem
+    // OrderPickupType) KHÔNG có transporter nhưng VẪN là đơn online: được tính
+    // nhờ isOnlineSale === true (SaleScreen set khi chọn Online). Không đổi điều
+    // kiện bên dưới thành "chỉ cần có transporter", nếu không đơn tự đến lấy sẽ
+    // bị đếm nhầm vào Offline.
     const transporter = order.get('transporter');
     const hasTransporter = !!(transporter && transporter.id);
     const isOnline = hasTransporter || order.get('isOnlineSale') === true;

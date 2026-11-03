@@ -116,6 +116,7 @@ curl -X POST 'http://localhost:1337/parse/functions/transporter' \
 
 2. Admin tạo đơn → gọi CREATE_ORDER (cần session token)
    → params: { orderId: <Parse Order objectId>, service: 'viettelpost', data: { from, to, items, serviceLevel, ... } }
+   → Server check: đơn KHÔNG phải "khách tự đến lấy" (Order.shippingInfo.pickupType ≠ 'self') — xem mục "Đơn khách tự đến lấy tại shop"
    → Server check: đơn chưa có vận đơn (Transporter chưa tồn tại)
    → Gọi VTP createOrder → nhận ORDER_NUMBER
    → Tạo Transporter object trong Parse DB { service, res: {..., ORDER_NUMBER}, order }
@@ -149,6 +150,23 @@ Gọi CANCEL_ORDER:
   → Parse: order.unset('transporter'), transporter.unset('order')
   → Webhook VTP sẽ push về với STATUS 107
 ```
+
+---
+
+## Đơn khách tự đến lấy tại shop (không có vận đơn)
+
+Màn hình Bán hàng (đơn Online) chỉ có 2 hình thức lấy hàng, lưu ở `Order.shippingInfo.pickupType`:
+
+| `pickupType` | Ý nghĩa                                                | Vận đơn VTP         |
+| ------------ | ------------------------------------------------------ | ------------------- |
+| `shipper`    | Shipper VTP đến lấy tại shop rồi giao khách (mặc định) | Có (`CREATE_ORDER`) |
+| `self`       | Khách tự đến lấy tại shop                              | **Không**           |
+
+- Dữ liệu cũ `'2'` (shipper) / `'1'` (shop gửi bưu cục) / không có field → đều hiểu là `shipper`. Hiện `createOrder` luôn gửi `ORDER_TYPE = 1` + `GROUPADDRESS_ID` (shipper đến lấy tại shop), không có luồng gửi bưu cục.
+- Đơn `self` lưu `shippingInfo = { pickupType: 'self', optionTransfer: 'tt', shippingFee: 0 }` (dịch vụ `tt` = lấy hàng trực tiếp), không có địa chỉ VTP.
+- **Vẫn là đơn online**: `Order.isOnlineSale = true` nên `getOrderSummary` đếm vào Online dù không có `transporter`. Không đổi điều kiện đếm Online thành "chỉ cần có transporter".
+- Server chặn tạo vận đơn: `CREATE_ORDER` đọc `Order.shippingInfo.pickupType` từ DB, nếu là `self` thì trả lỗi (constant `OrderPickupType` ở `src/constants/order-pickup.ts`).
+- Admin (client): bảng Đơn hàng hiện badge "Khách tự đến lấy" và không có nút "Tạo đơn" VTP cho đơn này; màn hình Bán hàng hiện khung thông tin sau khi tạo đơn.
 
 ---
 
@@ -216,7 +234,8 @@ src/
 │   ├── function/transporter.ts              # Cloud functions + auth check
 │   └── transporter/index.ts                 # Parse triggers (beforeSave/afterSave)
 ├── hooks/hooks.controller.ts                 # POST /hooks/viettelpost (webhook)
-└── constants/order-status.ts               # VIETTELPOST_STATUS map, VTP_FINAL_STATUSES
+├── constants/order-status.ts               # VIETTELPOST_STATUS map, VTP_FINAL_STATUSES
+└── constants/order-pickup.ts               # OrderPickupType: shipper | self (khách tự đến lấy)
 ```
 
 ---

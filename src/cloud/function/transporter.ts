@@ -19,6 +19,7 @@ import {
 } from '../../external-services/transporter/interface';
 import { Order } from '../../models/order';
 import { Transporter } from '../../models/transporter';
+import { OrderPickupType } from '../../constants';
 import { saveTokenToDB } from '../../external-services/transporter/viettelpost.token.service';
 
 export const getServicesAction = async (
@@ -217,6 +218,19 @@ export const tranporterAction = async (
       const { params } = request;
       const { data, service } = params;
       const { orderId } = data;
+      // Khách tự đến lấy tại shop → không có vận đơn. Tạo vận đơn VTP là thao
+      // tác thật, tốn phí nên đọc hình thức lấy hàng từ DB, không tin client.
+      const orderToShip = await new Parse.Query(Order)
+        .select('shippingInfo')
+        .get(orderId, { useMasterKey: true });
+      if (
+        orderToShip.get('shippingInfo')?.pickupType === OrderPickupType.SELF
+      ) {
+        throw new Parse.Error(
+          Parse.Error.VALIDATION_ERROR,
+          'Đơn hàng này khách tự đến lấy tại shop, không tạo vận đơn'
+        );
+      }
       const pointerOrder = new Order();
       pointerOrder.id = orderId;
       const tranQuery = new Parse.Query(Transporter);
