@@ -38,6 +38,25 @@ import {
 import { getOrderSummary } from './function/order-summary';
 import { updateUserByAdmin } from './function/user';
 import { syncConsignmentStock } from './function/consignment-sync';
+import { MONTH_REGEX } from '../common/vn-time';
+import { registerFinanceGuards } from './finance-guard';
+import { getMonthlyReport } from './function/report/monthly-report';
+import { getPayoutForecast } from './function/report/payout-forecast';
+import {
+  ATTACHMENT_KINDS,
+  addReportAttachment,
+  deleteReportAttachment,
+  listReportAttachments,
+} from './function/report/attachments';
+import {
+  linkBankTransaction,
+  syncSepayTransactions,
+  unlinkBankTransaction,
+} from './function/report/bank-link';
+import {
+  getMonthlyExpenses,
+  saveMonthlyExpenses,
+} from './function/report/expenses';
 
 const USER_CLOUD = {
   beforeCreate: async (
@@ -405,6 +424,124 @@ Parse.Cloud.define('updateUserByAdmin', updateUserByAdmin, {
 // Yêu cầu user đăng nhập với role administrator (check trong requireAdminRole).
 Parse.Cloud.define('syncConsignmentStock', syncConsignmentStock, {
   requireUser: true,
+});
+
+// ─── Báo cáo kiểm kê tháng + đối chiếu ngân hàng (SePay) ──────────────────────
+// BankTransaction / ReportAttachment chỉ server (master key) được truy cập trực
+// tiếp; client đi qua các Cloud Function bên dưới, tất cả đều yêu cầu role
+// administrator (kiểm tra trong từng hàm bằng requireAdminRole).
+registerFinanceGuards();
+
+const monthField = {
+  type: String,
+  required: true,
+  options: (val: string) => MONTH_REGEX.test(val),
+  error: 'month phải có dạng YYYY-MM',
+};
+
+Parse.Cloud.define('getMonthlyReport', getMonthlyReport, {
+  requireUser: true,
+  fields: {
+    month: monthField,
+    // true = bỏ bản lưu sẵn của tháng đã qua, tính lại và ghi đè
+    refresh: { type: Boolean, required: false },
+  },
+});
+
+Parse.Cloud.define('getPayoutForecast', getPayoutForecast, {
+  requireUser: true,
+  fields: {
+    since: {
+      type: String,
+      required: false,
+      options: (val: string) => MONTH_REGEX.test(val),
+      error: 'since phải có dạng YYYY-MM',
+    },
+  },
+});
+
+Parse.Cloud.define('syncSepayTransactions', syncSepayTransactions, {
+  requireUser: true,
+  fields: { month: monthField },
+});
+
+Parse.Cloud.define('linkBankTransaction', linkBankTransaction, {
+  requireUser: true,
+  fields: {
+    transactionId: {
+      type: String,
+      required: true,
+      options: (val: string) => !!val,
+      error: 'transactionId là bắt buộc',
+    },
+    targets: { type: Array, required: false },
+    note: { type: String, required: false },
+  },
+});
+
+Parse.Cloud.define('unlinkBankTransaction', unlinkBankTransaction, {
+  requireUser: true,
+  fields: {
+    transactionId: {
+      type: String,
+      required: true,
+      options: (val: string) => !!val,
+      error: 'transactionId là bắt buộc',
+    },
+    reason: { type: String, required: true },
+  },
+});
+
+Parse.Cloud.define('listReportAttachments', listReportAttachments, {
+  requireUser: true,
+  fields: { month: monthField },
+});
+
+Parse.Cloud.define('addReportAttachment', addReportAttachment, {
+  requireUser: true,
+  fields: {
+    month: monthField,
+    kind: {
+      type: String,
+      required: true,
+      options: (val: string) =>
+        (ATTACHMENT_KINDS as readonly string[]).includes(val),
+      error: `kind phải là một trong: ${ATTACHMENT_KINDS.join(', ')}`,
+    },
+    mediaId: {
+      type: String,
+      required: true,
+      options: (val: string) => !!val,
+      error: 'mediaId là bắt buộc',
+    },
+    note: { type: String, required: false },
+  },
+});
+
+Parse.Cloud.define('deleteReportAttachment', deleteReportAttachment, {
+  requireUser: true,
+  fields: {
+    attachmentId: {
+      type: String,
+      required: true,
+      options: (val: string) => !!val,
+      error: 'attachmentId là bắt buộc',
+    },
+    reason: { type: String, required: true },
+  },
+});
+
+Parse.Cloud.define('getMonthlyExpenses', getMonthlyExpenses, {
+  requireUser: true,
+  fields: { month: monthField },
+});
+
+Parse.Cloud.define('saveMonthlyExpenses', saveMonthlyExpenses, {
+  requireUser: true,
+  fields: {
+    month: monthField,
+    items: { type: Array, required: true },
+  },
 });
 
 // ─── Khởi tạo ViettelPost token khi Parse Cloud load ──────────────────────────

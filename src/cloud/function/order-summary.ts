@@ -103,8 +103,14 @@ export const getOrderSummary = async (
     const offlineAmt = Number(order.get('transferOfflineMoneyAmount'));
 
     moneyForSale += total;
+    // Phần trả khách không bao giờ lớn hơn tổng tiền bán (shop luôn ăn hoa
+    // hồng) — một số Order tháng 8/2026 có totalMoneyForSaleAfterFee bị lưu
+    // sai (cộng dồn qua nhiều đơn), coi là dữ liệu hỏng và tính lại theo công
+    // thức chuẩn thay vì tin thẳng giá trị đã lưu.
     moneyAfterFee +=
-      totalAfterFee > 0 ? totalAfterFee : convertPriceAfterFee(total);
+      totalAfterFee > 0 && totalAfterFee <= total
+        ? totalAfterFee
+        : convertPriceAfterFee(total);
     totalProduct += productCount;
     transferBankMoneyAmount += isNaN(bankAmt) ? 0 : bankAmt;
     transferOfflineMoneyAmount += isNaN(offlineAmt) ? 0 : offlineAmt;
@@ -136,7 +142,8 @@ export const getOrderSummary = async (
 };
 
 // ─── Helpers (mirror logic từ FE để tính nhất quán) ──────────────────────────
-function convertPriceAfterFee(productPrice: number): number {
+// Export để báo cáo kiểm kê tháng dùng chung đúng một công thức với getOrderSummary.
+export function convertPriceAfterFee(productPrice: number): number {
   if (productPrice <= 0) return 0;
   if (productPrice < 1000) return (productPrice * 74) / 100;
   if (productPrice <= 10000) return (productPrice * 77) / 100;

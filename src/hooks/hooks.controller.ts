@@ -1,6 +1,18 @@
-import { Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Query,
+  RawBodyRequest,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { Request, Response } from 'express';
 import logger from '../plugins/logger';
+import { getSepayConfig } from '../config/sepay.config';
+import { upsertBankTransactions } from '../cloud/bank-transaction/upsert';
+import { normalizeWebhookPayload } from '../external-services/sepay/sepay.normalize';
+import { verifySepayWebhook } from '../external-services/sepay/sepay.webhook-auth';
 import {
   getStatusByService,
   isVtpFinalStatus,
@@ -212,5 +224,71 @@ export class HooksController {
 
     // Luôn trả 200 theo yêu cầu tài liệu VTP
     return res.status(200).json({ success: true });
+  }
+
+  // ─── SePay webhook (biến động số dư ngân hàng) ───────────────────────────
+
+  /**
+   * Nhận giao dịch ngân hàng từ SePay
+   * POST /hooks/sepay
+   *
+   * Cấu hình tại my.sepay.vn → Webhooks (chọn sự kiện "Cả hai" để nhận cả tiền
+   * vào lẫn tiền ra). Kiểu chứng thực: HMAC-SHA256 (SEPAY_WEBHOOK_SECRET, khuyến
+   * nghị) hoặc API Key (SEPAY_WEBHOOK_API_KEY). Chưa cấu hình khoá thì từ chối hết.
+   *
+   * Theo tài liệu SePay:
+   * - Chỉ tính thành công khi trả HTTP 200/201 và đúng body {"success": true}
+   * - Lỗi/ timeout → SePay retry tối đa 7 lần, nên phải idempotent (xử lý trùng
+   *   bằng fingerprint trong upsertBankTransactions)
+   * - Request không hợp lệ (401/400) cũng bị retry nhưng không gây hại
+   */
+  @Post('sepay')
+  async sepayWebhook(
+    @Req() req: RawBodyRequest<Request>,
+    @Res() res: Response
+  ) {
+    const auth = verifySepayWebhook({
+      headers: req.headers,
+      rawBody: req.rawBody,
+    });
+    if (!auth.ok) {
+      logger.warn(`[SePay Webhook] Từ chối request: ${auth.reason}`);
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const tx = normalizeWebhookPayload(req.body);
+    if (!tx) {
+      logger.warn('[SePay Webhook] Payload thiếu hoặc sai trường bắt buộc');
+      return res
+        .status(400)
+        .json({ success: false, message: 'Invalid payload' });
+    }
+
+    // Tài khoản không thuộc shop (SePay công ty có thể liên kết nhiều tài khoản):
+    // báo thành công để SePay không retry nhưng không lưu.
+    const { accountNumbers } = getSepayConfig();
+    if (
+      accountNumbers.length > 0 &&
+      !accountNumbers.includes(tx.accountNumber)
+    ) {
+      return res.status(200).json({ success: true });
+    }
+
+    try {
+      const { inserted } = await upsertBankTransactions([tx]);
+      logger.info(
+        `[SePay Webhook] ${tx.type} ${tx.amountVnd}đ ref=${tx.referenceCode || tx.sepayId} ` +
+          (inserted > 0 ? '(mới)' : '(đã có, bỏ qua)')
+      );
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      // 500 để SePay retry — giao dịch chưa được lưu
+      logger.error(
+        `[SePay Webhook] Lưu giao dịch lỗi: ${error?.message || error}`
+      );
+      return res
+        .status(500)
+        .json({ success: false, message: 'Internal error' });
+    }
   }
 }

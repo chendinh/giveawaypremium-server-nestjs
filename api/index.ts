@@ -9,6 +9,8 @@ async function bootstrap() {
   if (!app) {
     app = await NestFactory.create<NestExpressApplication>(AppModule, {
       logger: false,
+      // giữ nguyên byte body để kiểm tra chữ ký HMAC của webhook SePay
+      rawBody: true,
     });
 
     app.enableCors({

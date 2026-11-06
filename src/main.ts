@@ -3,7 +3,10 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // rawBody: giữ nguyên byte body để kiểm tra chữ ký HMAC của webhook SePay
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
+  });
 
   app.enableCors({
     methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS', 'PATCH'],
