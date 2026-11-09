@@ -1,4 +1,4 @@
-import { requireAdminRole } from '../../../common/require-admin';
+import { requireReportViewerRole } from '../../../common/require-admin';
 import {
   currentVnMonth,
   getMonthRange,
@@ -70,7 +70,7 @@ const addMonths = (month: string, n: number): string => {
 export const getPayoutForecast = async (
   request: Parse.Cloud.FunctionRequest<{ since?: string }>
 ): Promise<PayoutForecast> => {
-  await requireAdminRole(request.user);
+  await requireReportViewerRole(request.user);
 
   const since = request.params?.since
     ? getMonthRange(request.params.since).from
@@ -83,7 +83,12 @@ export const getPayoutForecast = async (
   query.doesNotExist('deletedAt');
   query.notEqualTo('isGetMoney', true);
   query.greaterThanOrEqualTo('createdAt', trackingStart);
-  query.select(['moneyBack', 'moneyBackForFullSold', 'totalMoney', 'timeGetMoney']);
+  query.select([
+    'moneyBack',
+    'moneyBackForFullSold',
+    'totalMoney',
+    'timeGetMoney',
+  ]);
   const consignments = await query.findAll(FETCH_OPTIONS);
 
   const current = currentVnMonth();
@@ -142,9 +147,7 @@ export const getPayoutForecast = async (
     );
 
     const target =
-      due < currentStart
-        ? overdue
-        : (buckets.get(monthOfDate(due)) ?? later);
+      due < currentStart ? overdue : (buckets.get(monthOfDate(due)) ?? later);
     target.consignmentCount += 1;
     target.soldVnd += thousandsToVnd(sold);
     target.unsoldPotentialVnd += thousandsToVnd(full - sold);

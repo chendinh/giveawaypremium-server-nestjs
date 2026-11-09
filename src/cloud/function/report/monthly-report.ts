@@ -1,4 +1,4 @@
-import { requireAdminRole } from '../../../common/require-admin';
+import { requireReportViewerRole } from '../../../common/require-admin';
 import { getMonthRange, parseDayMonthYear } from '../../../common/vn-time';
 import { getSepayConfig } from '../../../config/sepay.config';
 import logger from '../../../plugins/logger';
@@ -221,7 +221,8 @@ const summarizePayouts = (payouts: DerivedPayout[]): PayoutSummary => {
  * Kèm theo: doanh thu chia theo online/offline × chuyển khoản/tiền mặt, chi tiết
  * từng đơn và từng khoản trả khách, đối chiếu với sao kê ngân hàng SePay.
  *
- * Quyền: chỉ role administrator.
+ * Quyền: administrator hoặc manager (xem). Mọi thao tác ghi của báo cáo vẫn chỉ
+ * administrator.
  */
 const computeMonthlyReport = async (
   month: string,
@@ -364,7 +365,7 @@ const computeMonthlyReport = async (
 export const getMonthlyReport = async (
   request: Parse.Cloud.FunctionRequest<{ month: string; refresh?: boolean }>
 ): Promise<MonthlyReport> => {
-  const admin = await requireAdminRole(request.user);
+  const admin = await requireReportViewerRole(request.user);
   const { month, refresh } = request.params;
   const cacheable = isPastMonth(month);
 

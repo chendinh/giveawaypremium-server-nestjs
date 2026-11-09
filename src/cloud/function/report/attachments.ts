@@ -1,4 +1,7 @@
-import { requireAdminRole } from '../../../common/require-admin';
+import {
+  requireAdminRole,
+  requireReportViewerRole,
+} from '../../../common/require-admin';
 import { MONTH_REGEX } from '../../../common/vn-time';
 import { ReportAttachment } from '../../../models/report.attachment';
 
@@ -60,7 +63,7 @@ const toDto = (obj: Parse.Object): ReportAttachmentDto => {
 export const listReportAttachments = async (
   request: Parse.Cloud.FunctionRequest<{ month: string }>
 ): Promise<ReportAttachmentDto[]> => {
-  await requireAdminRole(request.user);
+  await requireReportViewerRole(request.user);
   const { month } = request.params;
 
   const items = await new Parse.Query(ReportAttachment)

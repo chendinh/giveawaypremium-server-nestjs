@@ -1,4 +1,7 @@
-import { requireAdminRole } from '../../../common/require-admin';
+import {
+  requireAdminRole,
+  requireReportViewerRole,
+} from '../../../common/require-admin';
 import { MonthlyExpense } from '../../../models/monthly.expense';
 
 const MAX_ITEMS = 50;
@@ -68,7 +71,7 @@ export const getMonthlyExpensesInternal = async (
 export const getMonthlyExpenses = async (
   request: Parse.Cloud.FunctionRequest<{ month: string }>
 ): Promise<MonthlyExpensesDto> => {
-  await requireAdminRole(request.user);
+  await requireReportViewerRole(request.user);
   return getMonthlyExpensesInternal(request.params.month);
 };
 

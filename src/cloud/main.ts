@@ -75,6 +75,28 @@ Parse.Cloud.beforeSave(
   Parse.User,
   async (request: Parse.Cloud.BeforeSaveRequest<Parse.User>): Promise<void> => {
     const object = request.object;
+
+    // Khoá REST công khai nằm trong mã web nên mọi người gọi được POST/PUT _User.
+    // Vai trò nhân sự (administrator, manager, operator, disabled) chỉ được cấp
+    // bằng Master Key (script cấp tài khoản, Parse Dashboard). Khách đăng ký từ
+    // ngoài chỉ được là customer, và không ai tự đổi vai trò của chính mình.
+    if (!request.master) {
+      if (object.isNew()) {
+        const role = object.get('role');
+        if (role !== undefined && role !== USER_ROLES.CUSTOMER) {
+          throw new Parse.Error(
+            Parse.Error.OPERATION_FORBIDDEN,
+            'Không được tạo tài khoản với vai trò này'
+          );
+        }
+      } else if (object.get('role') !== request.original?.get('role')) {
+        throw new Parse.Error(
+          Parse.Error.OPERATION_FORBIDDEN,
+          'Không được đổi vai trò tài khoản'
+        );
+      }
+    }
+
     if (object.isNew()) await USER_CLOUD.beforeCreate(request);
   },
   {
@@ -89,6 +111,17 @@ Parse.Cloud.beforeSave(
     },
   }
 );
+
+// Tài khoản nhân sự bị khoá (role = disabled) không đăng nhập được, kể cả khi
+// ai đó đặt lại mật khẩu. Phiên đang mở phải xoá riêng (script cấp tài khoản làm).
+Parse.Cloud.beforeLogin(async request => {
+  if (request.object.get('role') === USER_ROLES.DISABLED) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Tài khoản đã bị khoá'
+    );
+  }
+});
 
 Parse.Cloud.beforeDelete(
   Parse.User,
