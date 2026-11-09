@@ -27,10 +27,11 @@ const syncConsignmentById = async (consignmentId: string): Promise<void> => {
     const consignmentPointer = new Consignment();
     consignmentPointer.id = consignmentId;
 
+    // findAll thay vì find: find() không limit chỉ trả 100 bản ghi.
     const products = await new Parse.Query(Product)
       .equalTo('consignment', consignmentPointer)
       .doesNotExist('deletedAt')
-      .find({ useMasterKey: true });
+      .findAll({ useMasterKey: true });
 
     const productList = products.map(p => ({
       ...p.toJSON(),

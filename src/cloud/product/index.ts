@@ -58,10 +58,12 @@ const syncConsignment = async (
   }
 
   const prodQuery = new Parse.Query(Product);
+  // findAll thay vì find: find() không limit chỉ trả 100 bản ghi, ký gửi >100
+  // sản phẩm sẽ bị tính thiếu (productList, tồn, đã bán, moneyBack).
   const products = await prodQuery
     .equalTo('consignment', consignmentPointer)
     .doesNotExist('deletedAt')
-    .find({ useMasterKey: true });
+    .findAll({ useMasterKey: true });
 
   const productList = products.map(p => {
     const productJson = p.toJSON();

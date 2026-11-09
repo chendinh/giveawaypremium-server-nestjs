@@ -3,6 +3,7 @@ import { BankTransaction } from '../../models/bank.transaction';
 import { NormalizedBankTx } from '../../external-services/sepay/sepay.types';
 import { BANK_MARGIN_MS } from '../function/report/reconciliation';
 import { invalidateSnapshotsNear } from '../function/report/snapshot';
+import { autoMarkPaidFromTransactions } from './auto-mark-paid';
 
 /**
  * Ghi tuần tự: webhook và lệnh đồng bộ có thể chạy cùng lúc cho cùng một giao dịch.
@@ -34,6 +35,7 @@ const doUpsert = async (
     );
 
     const toSave: BankTransaction[] = [];
+    const newItems: NormalizedBankTx[] = [];
     const seenInChunk = new Set<string>();
 
     for (const item of chunk) {
@@ -72,6 +74,7 @@ const doUpsert = async (
         raw: item.raw,
       });
       toSave.push(obj);
+      newItems.push(item);
       inserted += 1;
     }
 
@@ -88,6 +91,9 @@ const doUpsert = async (
       for (const time of newTimes) {
         await invalidateSnapshotsNear(new Date(time), BANK_MARGIN_MS);
       }
+      // Chỉ giao dịch mới lưu lần này mới được xét: webhook gửi lại (retry) hay
+      // đồng bộ chồng lên nhau không đánh dấu hai lần. Hàm này không throw.
+      await autoMarkPaidFromTransactions(newItems);
     }
   }
 

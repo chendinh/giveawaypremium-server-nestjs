@@ -62,11 +62,13 @@ const afterDelete = async (
 ) => {
   const consignmentPointer = request.object;
   const prodQuery = new Parse.Query(Product);
-  // Chỉ soft-delete các products chưa bị xóa
+  // Chỉ soft-delete các products chưa bị xóa.
+  // findAll thay vì find: find() không limit chỉ trả 100 bản ghi, ký gửi >100
+  // sản phẩm sẽ bị xoá thiếu và để lại sản phẩm mồ côi còn bán được.
   const products = await prodQuery
     .equalTo('consignment', consignmentPointer)
     .doesNotExist('deletedAt')
-    .find();
+    .findAll();
   if (!products.length) return;
   try {
     await Parse.Object.saveAll(
@@ -87,6 +89,22 @@ const afterDelete = async (
 const beforeSave = async (request: Parse.Cloud.BeforeSaveRequest) => {
   try {
     const consignment = request.object;
+
+    // Đã trả tiền thì không được hoàn lại từ client: tiền đã rời tài khoản, và
+    // việc này đã được đối chiếu với sao kê. So sánh giá trị chứ không dùng
+    // dirty(), vì client lưu cả ký gửi sẽ gửi lại isGetMoney dù không đổi.
+    // Master key (Dashboard/script) vẫn sửa được khi nhập nhầm.
+    if (
+      !consignment.isNew() &&
+      !request.master &&
+      request.original?.get('isGetMoney') === true &&
+      consignment.get('isGetMoney') !== true
+    ) {
+      throw new Parse.Error(
+        Parse.Error.OPERATION_FORBIDDEN,
+        'Ký gửi đã trả tiền, không thể huỷ xác nhận. Liên hệ quản trị viên nếu nhập nhầm.'
+      );
+    }
 
     if (consignment.isNew()) {
       request.context.isNew = true;
