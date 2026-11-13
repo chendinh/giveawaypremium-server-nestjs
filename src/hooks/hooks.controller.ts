@@ -230,7 +230,7 @@ export class HooksController {
 
   /**
    * Nhận giao dịch ngân hàng từ SePay
-   * POST /hooks/sepay
+   * POST /hooks/sepay-payment (đường dẫn chính) hoặc /hooks/sepay (giữ tương thích)
    *
    * Cấu hình tại my.sepay.vn → Webhooks (chọn sự kiện "Cả hai" để nhận cả tiền
    * vào lẫn tiền ra). Kiểu chứng thực: HMAC-SHA256 (SEPAY_WEBHOOK_SECRET, khuyến
@@ -242,7 +242,7 @@ export class HooksController {
    *   bằng fingerprint trong upsertBankTransactions)
    * - Request không hợp lệ (401/400) cũng bị retry nhưng không gây hại
    */
-  @Post('sepay')
+  @Post(['sepay-payment', 'sepay'])
   async sepayWebhook(
     @Req() req: RawBodyRequest<Request>,
     @Res() res: Response
