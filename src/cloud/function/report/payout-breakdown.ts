@@ -20,10 +20,25 @@
  * chính xác consignerShareVnd, không lệch do công thức fallback khác).
  */
 
+/**
+ * Tham chiếu tới ký gửi trong productList của Order. Client lưu dạng Pointer
+ * (`{ __type: 'Pointer', objectId }`), nhưng Parse JS SDK trong cloud code giải mã
+ * Pointer lồng nhau thành Parse.Object, vốn chỉ có `.id` chứ không có `.objectId`.
+ * Dữ liệu dạng object thuần `{ objectId }` cũng có thể gặp.
+ */
+export interface ConsignmentRef {
+  objectId?: string;
+  id?: string;
+}
+
+export const consignmentIdOf = (
+  ref: ConsignmentRef | null | undefined
+): string | undefined => ref?.objectId ?? ref?.id ?? undefined;
+
 interface ProductListItem {
   count?: number;
   priceAfterFee?: number;
-  consignment?: { objectId?: string } | null;
+  consignment?: ConsignmentRef | null;
 }
 
 export interface ConsignmentPaidStatus {
@@ -53,7 +68,7 @@ export const collectConsignmentIds = (
   const ids = new Set<string>();
   for (const order of orders) {
     for (const item of order.productList || []) {
-      const id = item.consignment?.objectId;
+      const id = consignmentIdOf(item.consignment);
       if (id) ids.add(id);
     }
   }
@@ -79,9 +94,8 @@ export const computeConsignerShareBreakdown = (
     for (const item of items) {
       const value = (item.count || 1) * (item.priceAfterFee || 0);
       itemTotal += value;
-      const status = item.consignment?.objectId
-        ? statusById.get(item.consignment.objectId)
-        : undefined;
+      const refId = consignmentIdOf(item.consignment);
+      const status = refId ? statusById.get(refId) : undefined;
       if (status?.isPaid) {
         itemPaid += value;
         if (status.paidThisMonth) itemPaidThisMonth += value;

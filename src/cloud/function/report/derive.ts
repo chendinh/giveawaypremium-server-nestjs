@@ -76,7 +76,7 @@ export interface DerivedOrder {
   productList: Array<{
     count?: number;
     priceAfterFee?: number;
-    consignment?: { objectId?: string } | null;
+    consignment?: { objectId?: string; id?: string } | null;
   }>;
 }
 
@@ -214,7 +214,10 @@ export const extractPaidMarker = (note: unknown): string | null => {
  * sửa tại đây để mọi nơi đọc moneyBack qua derivePayout đều ra số đúng,
  * không cần sửa từng chỗ gọi.
  */
-export const safeMoneyBack = (moneyBack: number, totalMoney: number): number => {
+export const safeMoneyBack = (
+  moneyBack: number,
+  totalMoney: number
+): number => {
   if (totalMoney > 0 && moneyBack > totalMoney * 1.05) {
     const corrected = moneyBack / 1000;
     const ratio = corrected / totalMoney;

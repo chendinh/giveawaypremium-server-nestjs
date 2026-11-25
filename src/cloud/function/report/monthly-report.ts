@@ -16,8 +16,10 @@ import { getMonthlyExpensesInternal } from './expenses';
 import { buildHolding } from './holding';
 import {
   ConsignmentPaidStatus,
+  ConsignmentRef,
   ConsignmentSaleHistoryItem,
   collectConsignmentIds,
+  consignmentIdOf,
   computeConsignerShareBreakdown,
   computePayoutOriginBreakdown,
 } from './payout-breakdown';
@@ -126,10 +128,10 @@ const loadConsignmentSaleHistory = async (
     const items = (order.get('productList') || []) as Array<{
       count?: number;
       priceAfterFee?: number;
-      consignment?: { objectId?: string };
+      consignment?: ConsignmentRef;
     }>;
     for (const item of items) {
-      const consignmentId = item.consignment?.objectId;
+      const consignmentId = consignmentIdOf(item.consignment);
       if (!consignmentId || !idSet.has(consignmentId)) continue;
       const valueVnd = thousandsToVnd(
         (item.count || 1) * (item.priceAfterFee || 0)
